@@ -4,6 +4,7 @@ import type { CarState, DriverInputs } from '../sim/types';
 
 export type ToWorker =
   | { type: 'start'; paramSet: ParamSetName }
+  | { type: 'setParams'; paramSet: ParamSetName }
   | { type: 'inputs'; inputs: DriverInputs }
   | { type: 'reset' }
   | { type: 'telemetry'; recording: boolean };

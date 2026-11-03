@@ -5,9 +5,9 @@
  * every few ms we look at how much real time has passed and run that many
  * 1 ms steps, then send the newest state to the main thread.
  */
-import carFile from '../../data/cars/box.json';
+import carFile from '../../data/cars/openwheel.json';
 import { SIM_DT } from '../sim/constants';
-import { loadCarParams, type CarFile, type CarParams } from '../sim/params';
+import { loadCarParams, type CarFile, type CarParams, type ParamSetName } from '../sim/params';
 import { step as stepFn } from '../sim/step';
 import { telemetryRow, telemetryToCSV } from '../sim/telemetry';
 import { initialState, NEUTRAL_INPUTS, type CarState, type DriverInputs } from '../sim/types';
@@ -28,6 +28,10 @@ const ctx = self as unknown as {
 
 let params: CarParams | null = null;
 let state: CarState = initialState(START_POSE);
+
+function load(set: ParamSetName): CarParams {
+  return loadCarParams(carFile as unknown as CarFile, set);
+}
 let inputs: DriverInputs = { ...NEUTRAL_INPUTS };
 let accumulator = 0;
 let lastWall = 0;
@@ -75,19 +79,23 @@ ctx.onmessage = (e) => {
   switch (msg.type) {
     case 'start': {
       const first = params === null;
-      params = loadCarParams(carFile as CarFile, msg.paramSet);
+      params = load(msg.paramSet);
       if (first) {
+        state = initialState(START_POSE, params.idleRpm);
         lastWall = performance.now();
         rateWindowStart = lastWall;
         tick();
       }
       break;
     }
+    case 'setParams':
+      params = load(msg.paramSet);
+      break;
     case 'inputs':
       inputs = msg.inputs;
       break;
     case 'reset':
-      state = initialState(START_POSE);
+      state = initialState(START_POSE, params?.idleRpm ?? 0);
       break;
     case 'telemetry':
       if (msg.recording) {

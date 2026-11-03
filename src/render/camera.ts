@@ -6,8 +6,8 @@ import * as THREE from 'three';
 export type CameraMode = 'chase' | 'nose';
 
 export const CHASE_TUNING = {
-  distance: 7.5, // m behind
-  height: 2.6, // m above
+  distance: 6.5, // m behind
+  height: 2.2, // m above
   lookAhead: 4.0, // m in front of the car
   lookHeight: 0.6, // m
   yawFollowRate: 6.0, // 1/s: how fast the camera swings round behind the car
@@ -17,7 +17,8 @@ export const CHASE_TUNING = {
   maxFov: 82,
 };
 
-export const NOSE_TUNING = { forward: 0.8, height: 1.05, fov: 72 };
+/** Cockpit camera: just above and behind the driver's helmet. */
+export const NOSE_TUNING = { forward: 0.15, height: 1.02, fov: 74 };
 
 const damp = (rate: number, dt: number) => 1 - Math.exp(-rate * dt);
 
@@ -33,7 +34,8 @@ export class CarCamera {
   private initialised = false;
 
   constructor(aspect: number) {
-    this.camera = new THREE.PerspectiveCamera(CHASE_TUNING.baseFov, aspect, 0.1, 3000);
+    // near/far kept as tight as possible: depth precision depends on their ratio.
+    this.camera = new THREE.PerspectiveCamera(CHASE_TUNING.baseFov, aspect, 0.3, 2500);
   }
 
   toggle(): void {

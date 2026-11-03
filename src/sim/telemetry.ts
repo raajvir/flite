@@ -1,25 +1,54 @@
 /**
- * Telemetry CSV formatting (pure). Columns grow as the model grows:
- * gear, per-wheel load, slip and surface arrive in M2/M3.
+ * Telemetry CSV formatting (pure). Per-wheel surface type arrives in M3.
  */
-import type { CarState, DriverInputs } from './types';
+import { WHEEL_NAMES, type CarState, type DriverInputs } from './types';
 
-export const TELEMETRY_COLUMNS = [
+const PER_WHEEL = ['load_N', 'slip_ratio', 'slip_angle_rad', 'omega_radps'] as const;
+
+export const TELEMETRY_COLUMNS: readonly string[] = [
   't_s',
   'distance_m',
   'speed_mps',
   'steer_in',
   'throttle_in',
   'brake_in',
+  'gear',
+  'rpm',
   'steer_angle_rad',
   'yaw_rate_radps',
+  'ax_mps2',
+  'ay_mps2',
+  'sideslip_rad',
+  'body_pitch_rad',
+  'body_roll_rad',
+  ...WHEEL_NAMES.flatMap((w) => PER_WHEEL.map((c) => `${w}_${c}`)),
   'x_m',
   'z_m',
   'yaw_rad',
-] as const;
+];
 
 export function telemetryRow(s: CarState, i: DriverInputs): number[] {
-  return [s.t, s.distance, s.u, i.steer, i.throttle, i.brake, s.steerAngle, s.yawRate, s.x, s.z, s.yaw];
+  return [
+    s.t,
+    s.distance,
+    Math.hypot(s.u, s.v),
+    i.steer,
+    i.throttle,
+    i.brake,
+    s.gear,
+    s.rpm,
+    s.steerAngle,
+    s.yawRate,
+    s.axFiltered,
+    s.ayFiltered,
+    Math.atan2(s.v, Math.max(Math.abs(s.u), 1e-3)),
+    s.pitch,
+    s.roll,
+    ...s.wheels.flatMap((w) => [w.load, w.kappa, Math.atan(w.tanAlpha), w.omega]),
+    s.x,
+    s.z,
+    s.yaw,
+  ];
 }
 
 export function telemetryToCSV(rows: readonly number[][]): string {
