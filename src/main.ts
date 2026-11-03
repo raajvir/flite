@@ -2,9 +2,11 @@
 import carFile from '../data/cars/openwheel.json';
 import { CarSound } from './audio/sound';
 import { DemoDriver } from './input/demoDriver';
+import { GamepadDriver } from './input/gamepad';
 import { KeyboardDriver } from './input/keyboard';
 import { CarCamera } from './render/camera';
 import { createCarModel } from './render/carModel';
+import { TireEffects } from './render/effects';
 import { SnapshotInterpolator } from './render/interpolation';
 import { createWorld, followSun } from './render/scene';
 import { loadCarParams, type CarFile, type ParamSetName } from './sim/params';
@@ -25,11 +27,16 @@ const car = createCarModel({
   wheelRadius: params.wheelRadius,
 });
 world.scene.add(car.root);
+const effects = new TireEffects(world.scene, params);
 
 const cam = new CarCamera(window.innerWidth / window.innerHeight);
 const keyboard = new KeyboardDriver();
+const gamepad = new GamepadDriver();
 const interp = new SnapshotInterpolator();
-const demo = query.has('demo') ? new DemoDriver(params) : null;
+// ?demo = autopilot laps; ?demo=donut = full lock + full throttle (shows smoke and skid marks).
+const demo = query.get('demo') === 'donut'
+  ? { update: () => ({ steer: 1, throttle: 1, brake: 0 }) }
+  : query.has('demo') ? new DemoDriver(params) : null;
 const hud = document.getElementById('hud') as HTMLElement;
 
 const worker = new Worker(new URL('./worker/simWorker.ts', import.meta.url), { type: 'module' });
@@ -54,6 +61,7 @@ send({ type: 'start', paramSet });
 window.addEventListener('pointerdown', () => sound.start());
 window.addEventListener('keydown', (e) => {
   sound.start();
+  gamepad.active = false; // keyboard used: hand control back to it
   if (e.repeat) return;
   if (e.code === 'KeyM') sound.toggleMute();
   if (e.code === 'KeyR') send({ type: 'reset' });
@@ -104,8 +112,9 @@ function frame(now: number): void {
   last = now;
 
   const kb = keyboard.update(dt);
+  const pad = gamepad.read();
   const latest = interp.latest();
-  const inputs = demo && latest ? demo.update(latest) : kb;
+  const inputs = demo && latest ? demo.update(latest) : pad && gamepad.active ? pad : kb;
   send({ type: 'inputs', inputs });
 
   const s = interp.sample(dt);
@@ -113,11 +122,8 @@ function frame(now: number): void {
     applyState(s);
     followSun(world.sun, s.x, s.z);
     cam.update(dt, s);
-    sound.update(s, s.gear < 0 ? inputs.brake : inputs.throttle, {
-      peakSlipRatio: params.tirePeakSlipRatio,
-      tanPeakSlipAngle: Math.tan(params.tirePeakSlipAngle),
-      wheelRadius: params.wheelRadius,
-    });
+    sound.update(s, s.gear < 0 ? inputs.brake : inputs.throttle, params);
+    effects.update(dt, s, params);
   }
   world.renderer.render(world.scene, cam.camera);
 
@@ -139,7 +145,7 @@ function frame(now: number): void {
       `       ${slipBar(rl)} ${slipBar(rr)}\n` +
       `fps    ${fps.toFixed(0).padStart(4)}   worst ${worstShown.toFixed(1)} ms\n` +
       `sim    ${simRate.toFixed(0).padStart(4)} Hz\n` +
-      `set    ${paramSet} (P)   cam ${cam.mode}${demo ? '   DEMO' : ''}` +
+      `set    ${paramSet} (P)   cam ${cam.mode}   ${demo ? 'DEMO' : gamepad.active ? 'gamepad' : 'keyboard'}` +
       (recording ? '\n● REC telemetry (T to save)' : '');
   }
   requestAnimationFrame(frame);

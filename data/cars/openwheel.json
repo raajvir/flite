@@ -68,11 +68,12 @@
       "absEnabled": { "value": 0, "unit": "bool", "source": "design" },
       "absSlip": { "value": 0.12, "unit": "-", "source": "design" },
       "tcsEnabled": { "value": 0, "unit": "bool", "source": "design" },
-      "tcsSlip": { "value": 1.6, "unit": "-", "source": "design", "note": "combined slip / peak slip; 1 = at the tire peak" },
+      "tcsSlip": { "value": 1.1, "unit": "-", "source": "design", "note": "combined slip / peak slip; 1 = at the tire peak" },
       "stabilityAssist": { "value": 0, "unit": "N*m*s/rad", "source": "design", "note": "yaw damping towards the steered yaw rate; 0 = off" },
-      "stabilityMaxLatAccel": { "value": 40, "unit": "m/s^2", "source": "design" },
+      "stabilityGripFraction": { "value": 0.85, "unit": "-", "source": "design", "note": "assist targets yaw rate up to this fraction of the tires' current lateral grip" },
       "stabilityFadeSpeed": { "value": 8, "unit": "m/s", "source": "design", "note": "assist fades in from 0 to full by this speed" },
-      "assistLockRelease": { "value": 1.0, "unit": "-", "source": "design", "note": "how far TCS + stability assist back off at full steering lock (1 = fully off -> donuts)" }
+      "assistLockRelease": { "value": 1.0, "unit": "-", "source": "design", "note": "how far TCS + stability assist back off in donut mode (full lock + full throttle, slow); 1 = fully off" },
+      "assistReleaseSpeed": { "value": 8, "unit": "m/s", "source": "design", "note": "donut mode only below this speed; assists fully back by 2x this" }
     },
     "feel": {
       "inherits": "sim",
@@ -83,7 +84,8 @@
       "steerRate": { "value": 2.2, "unit": "rad/s", "source": "design", "note": "feel: quicker turn-in" },
       "absEnabled": { "value": 1, "unit": "bool", "source": "design" },
       "tcsEnabled": { "value": 1, "unit": "bool", "source": "design" },
-      "stabilityAssist": { "value": 5000, "unit": "N*m*s/rad", "source": "design", "note": "feel: strong yaw damping" }
+      "stabilityAssist": { "value": 8000, "unit": "N*m*s/rad", "source": "design", "note": "feel: strong yaw damping" },
+      "rollStiffnessFront": { "value": 0.6, "unit": "-", "source": "design", "note": "feel: a touch more understeer, rear stays planted" }
     }
   }
 }

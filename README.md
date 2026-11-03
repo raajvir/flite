@@ -12,11 +12,13 @@ npm run dev        # then open http://localhost:5173
 
 URL options:
 - `?demo` — an autopilot drives laps of the test area (no keyboard needed)
+- `?demo=donut` — full lock + full throttle: smoke and skid marks
 - `?set=sim` — use the `sim` handling set instead of `feel`
 
 Controls: ↑/W throttle · ↓/S/Space brake (hold when stopped = reverse) · ←→/AD steer ·
 R reset · C chase/cockpit camera · P switch feel/sim handling · M mute ·
 T start/stop telemetry recording (saves a CSV).
+Gamepad: left stick steer, right trigger throttle, left trigger brake (touch it to take over).
 
 Tip: full lock + full throttle from a standstill (feel set) = donut.
 

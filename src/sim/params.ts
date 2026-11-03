@@ -72,9 +72,10 @@ const NUMBER_KEYS = [
   'tcsEnabled',
   'tcsSlip',
   'stabilityAssist',
-  'stabilityMaxLatAccel',
+  'stabilityGripFraction',
   'stabilityFadeSpeed',
   'assistLockRelease',
+  'assistReleaseSpeed',
 ] as const;
 
 type NumberKey = (typeof NUMBER_KEYS)[number];

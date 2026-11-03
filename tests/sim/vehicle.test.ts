@@ -163,6 +163,24 @@ describe('assists (feel vs sim)', () => {
     expect(isFiniteState(s)).toBe(true);
   });
 
+  it('feel set: holding full lock + full throttle at speed does not break into a drift', () => {
+    for (const kmhStart of [80, 140, 200]) {
+      const p = params('feel');
+      const [fast] = runUntil(p, start(p), FULL_THROTTLE, (s) => kmh(s.u) >= kmhStart, 20);
+      let worstBeta = 0;
+      let worstRear = 0;
+      const tanPeak = Math.tan(p.tirePeakSlipAngle);
+      run(p, fast, { steer: 1, throttle: 1, brake: 0 }, 2.5, (s) => {
+        worstBeta = Math.max(worstBeta, Math.abs(Math.atan2(s.v, Math.abs(s.u))));
+        const rear = (Math.abs(s.wheels[2].tanAlpha) + Math.abs(s.wheels[3].tanAlpha)) / 2;
+        worstRear = Math.max(worstRear, rear / tanPeak);
+      });
+      // A drift = rear tires far past their peak and the car well out of line with its path.
+      expect(worstBeta, `sideslip at ${kmhStart} km/h`).toBeLessThan(0.175); // < 10 deg
+      expect(worstRear, `rear slip at ${kmhStart} km/h`).toBeLessThan(1.8); // rears not sliding away
+    }
+  });
+
   it('feel set recovers from a flick that spins the sim set', () => {
     const spinAngle = (set: 'feel' | 'sim') => {
       const p = params(set);

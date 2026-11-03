@@ -106,9 +106,13 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
   // Traction control (assist): cut drive torque when a driven tire's COMBINED slip
   // (spin + sideways) passes tcsSlip, where 1.0 = at the tire's peak. Watching combined
   // slip means it also catches power oversteer, not just straight-line wheelspin.
-  // Steering at full lock = "I mean it": assists back off so you can drift or do donuts.
+  // Donut mode: full lock + full throttle at low speed = "I mean it", so the assists back off.
+  // Above assistReleaseSpeed they fade back in (fully on at 2x), so normal driving stays planted
+  // even though a held keyboard key always means full lock.
   const lockFraction = Math.min(1, Math.abs(steerAngle) / Math.max(steerLock(p, Math.abs(s.u)), 1e-6));
-  const assistScale = 1 - p.assistLockRelease * lockFraction * lockFraction;
+  const slowEnough = clamp(2 - Math.abs(s.u) / p.assistReleaseSpeed, 0, 1);
+  const donutIntent = lockFraction * lockFraction * throttleIn * slowEnough;
+  const assistScale = 1 - p.assistLockRelease * donutIntent;
   if (p.tcsEnabled > 0 && crank > 0 && assistScale > 0) {
     const slip = Math.max(normalisedSlip(wRL, tire), normalisedSlip(wRR, tire));
     const threshold = p.tcsSlip / assistScale;
@@ -197,7 +201,10 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
 
   if (p.stabilityAssist > 0) {
     const speed = Math.abs(s.u);
-    const limit = p.stabilityMaxLatAccel / Math.max(speed, p.tireLowSpeed);
+    // Target no more rotation than the tires can actually sustain right now (incl. downforce),
+    // so asking for too much steering gives a controlled push wide instead of a slide.
+    const gripLatAccel = (p.tireMuY * (loads[0] + loads[1] + loads[2] + loads[3]) * p.stabilityGripFraction) / p.mass;
+    const limit = gripLatAccel / Math.max(speed, p.tireLowSpeed);
     const targetYawRate = clamp((s.u * Math.tan(steerAngle)) / p.wheelbase, -limit, limit);
     const fade = Math.min(1, speed / p.stabilityFadeSpeed);
     // Yawing the way you're steering at full lock is intentional (donut/drift): back off.
