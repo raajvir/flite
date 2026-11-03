@@ -9,6 +9,7 @@ import { createCarModel } from './render/carModel';
 import { TireEffects } from './render/effects';
 import { SnapshotInterpolator } from './render/interpolation';
 import { createWorld, followSun } from './render/scene';
+import { TuningPanel } from './ui/tuningPanel';
 import { loadCarParams, type CarFile, type ParamSetName } from './sim/params';
 import type { CarState } from './sim/types';
 import type { FromWorker, ToWorker } from './worker/protocol';
@@ -16,7 +17,18 @@ import type { FromWorker, ToWorker } from './worker/protocol';
 const CAR = carFile as unknown as CarFile;
 const query = new URLSearchParams(location.search);
 let paramSet: ParamSetName = query.get('set') === 'sim' ? 'sim' : 'feel';
-let params = loadCarParams(CAR, paramSet);
+const defaults = { feel: loadCarParams(CAR, 'feel'), sim: loadCarParams(CAR, 'sim') };
+const panel = new TuningPanel({
+  getSet: () => paramSet,
+  getDefaults: (set) => defaults[set],
+  onChange: (set, overrides) => {
+    if (set !== paramSet) return;
+    params = loadCarParams(CAR, set, overrides);
+    send({ type: 'setParams', paramSet: set, overrides });
+  },
+});
+let params = loadCarParams(CAR, paramSet, panel.overrides(paramSet));
+if (query.has('tuning')) panel.toggle();
 
 const world = createWorld(document.body);
 const car = createCarModel({
@@ -55,7 +67,7 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
     downloadText(`telemetry-${paramSet}-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`, m.csv);
   }
 };
-send({ type: 'start', paramSet });
+send({ type: 'start', paramSet, overrides: panel.overrides(paramSet) });
 
 // Audio needs a user gesture before it may start.
 window.addEventListener('pointerdown', () => sound.start());
@@ -64,12 +76,15 @@ window.addEventListener('keydown', (e) => {
   gamepad.active = false; // keyboard used: hand control back to it
   if (e.repeat) return;
   if (e.code === 'KeyM') sound.toggleMute();
+  if (e.code === 'KeyO') panel.toggle();
   if (e.code === 'KeyR') send({ type: 'reset' });
   if (e.code === 'KeyC') cam.toggle();
   if (e.code === 'KeyP') {
     paramSet = paramSet === 'feel' ? 'sim' : 'feel';
-    params = loadCarParams(CAR, paramSet);
-    send({ type: 'setParams', paramSet });
+    const overrides = panel.overrides(paramSet);
+    params = loadCarParams(CAR, paramSet, overrides);
+    send({ type: 'setParams', paramSet, overrides });
+    panel.render();
   }
   if (e.code === 'KeyT') {
     recording = !recording;

@@ -78,7 +78,14 @@ const NUMBER_KEYS = [
   'assistReleaseSpeed',
 ] as const;
 
-type NumberKey = (typeof NUMBER_KEYS)[number];
+export type NumberKey = (typeof NUMBER_KEYS)[number];
+
+/** Live tweaks on top of a parameter set (from the tuning panel). */
+export type ParamOverrides = Partial<Record<NumberKey, number>>;
+
+export function isNumberKey(k: string): k is NumberKey {
+  return (NUMBER_KEYS as readonly string[]).includes(k);
+}
 
 export type CarParams = Record<NumberKey, number> & {
   /** [rpm, N*m] points, rpm ascending */
@@ -108,7 +115,7 @@ function resolveSet(file: CarFile, set: string, seen: string[] = []): Record<str
   return { ...base, ...(own as Record<string, ParamEntry>) };
 }
 
-export function loadCarParams(file: CarFile, set: ParamSetName): CarParams {
+export function loadCarParams(file: CarFile, set: ParamSetName, overrides: ParamOverrides = {}): CarParams {
   const merged = resolveSet(file, set);
   const err = (k: string) => new Error(`Car "${file.name}" set "${set}": missing or invalid "${k}"`);
 
@@ -116,6 +123,11 @@ export function loadCarParams(file: CarFile, set: ParamSetName): CarParams {
   for (const key of NUMBER_KEYS) {
     const v = merged[key]?.value;
     if (typeof v !== 'number' || !Number.isFinite(v)) throw err(key);
+    nums[key] = v;
+  }
+  for (const [key, v] of Object.entries(overrides)) {
+    if (!isNumberKey(key)) throw new Error(`Unknown parameter override "${key}"`);
+    if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`Override "${key}" must be a finite number`);
     nums[key] = v;
   }
 

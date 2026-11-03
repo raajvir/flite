@@ -13,10 +13,11 @@ npm run dev        # then open http://localhost:5173
 URL options:
 - `?demo` — an autopilot drives laps of the test area (no keyboard needed)
 - `?demo=donut` — full lock + full throttle: smoke and skid marks
+- `?tuning` — open the tuning panel on load
 - `?set=sim` — use the `sim` handling set instead of `feel`
 
 Controls: ↑/W throttle · ↓/S/Space brake (hold when stopped = reverse) · ←→/AD steer ·
-R reset · C chase/cockpit camera · P switch feel/sim handling · M mute ·
+R reset · C chase/cockpit camera · P switch feel/sim handling · O tuning panel · M mute ·
 T start/stop telemetry recording (saves a CSV).
 Gamepad: left stick steer, right trigger throttle, left trigger brake (touch it to take over).
 
@@ -46,7 +47,7 @@ docs/demos/  screenshots from each milestone
 ## Status
 
 - [x] M1 skeleton — box car, chase camera, 1000 Hz sim worker
-- [~] M2 car model + feel tuning (built; waiting for your driving sign-off)
+- [x] M2 car model + feel tuning (+ live tuning panel, press O)
 - [ ] M3 surface system
 - [ ] M4 first circuit (Italian circuit)
 - [ ] M5 game loop

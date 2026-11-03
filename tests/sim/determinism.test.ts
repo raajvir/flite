@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { SIM_DT } from '../../src/sim/constants';
 import { step } from '../../src/sim/step';
 import type { CarState, DriverInputs } from '../../src/sim/types';
-import { params, start } from './helpers';
+import { loadCarParams } from '../../src/sim/params';
+import { CAR, params, start } from './helpers';
 
 /** A fixed, varied input sequence (no randomness). */
 function inputsAt(i: number): DriverInputs {
@@ -47,5 +48,20 @@ describe('parameter sets', () => {
     expect(feel.mass).toBe(sim.mass);
     expect(feel.tireMuY).toBeGreaterThan(sim.tireMuY);
     expect(feel.stabilityAssist).toBeGreaterThan(0);
+  });
+});
+
+describe('parameter overrides (tuning panel)', () => {
+  it('override replaces the value and derived values are recomputed', () => {
+    const base = params('feel');
+    const p = loadCarParams(CAR, 'feel', { weightFront: 0.5, tireShapeC: 1.6, brakeBiasFront: 0.62 });
+    expect(p.brakeBiasFront).toBe(0.62);
+    expect(p.derived.a).toBeCloseTo(p.wheelbase * 0.5, 12);
+    expect(p.derived.tire.B).not.toBe(base.derived.tire.B);
+  });
+
+  it('rejects unknown or non-finite overrides', () => {
+    expect(() => loadCarParams(CAR, 'feel', { nope: 1 } as never)).toThrow(/Unknown/);
+    expect(() => loadCarParams(CAR, 'feel', { mass: Number.NaN })).toThrow(/finite/);
   });
 });

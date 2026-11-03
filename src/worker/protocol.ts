@@ -1,10 +1,10 @@
 /** Messages between the main thread and the sim worker. */
-import type { ParamSetName } from '../sim/params';
+import type { ParamOverrides, ParamSetName } from '../sim/params';
 import type { CarState, DriverInputs } from '../sim/types';
 
 export type ToWorker =
-  | { type: 'start'; paramSet: ParamSetName }
-  | { type: 'setParams'; paramSet: ParamSetName }
+  | { type: 'start'; paramSet: ParamSetName; overrides: ParamOverrides }
+  | { type: 'setParams'; paramSet: ParamSetName; overrides: ParamOverrides }
   | { type: 'inputs'; inputs: DriverInputs }
   | { type: 'reset' }
   | { type: 'telemetry'; recording: boolean };
