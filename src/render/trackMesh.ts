@@ -14,10 +14,16 @@ import type { SurfaceBand, TrackWorld } from '../sim/trackWorld';
 import { Builder } from './meshBuilder';
 
 const STEP = 2; // m between cross-sections along the track
-const VERGE_BEYOND_WALL = 40; // m of grass drawn outside the walls
+/** Points this far along the track from the one being drawn count as "another part of the track", m. */
+const OTHER_SECTION_GAP = 40;
+/** Draw a retaining wall when the verge is this far above the terrain, m. */
+const SKIRT_MIN = 0.8;
+const SKIRT_COLOR = '#9aa39a';
+/** Slightly varied greens so the low-poly terrain facets read. */
+const TERRAIN_SHADES = ['#78c066', '#7cc46a', '#74bb62', '#80c86e'];
 const OVERLAY_LIFT = 0.02; // m
 const KERB_LIFT = 0.012; // m: kerbs drawn a hair above the road so their inner edge doesn't flicker
-const GROUND_DROP = 0.25; // m: infinite ground plane sits this far below
+const GROUND_DROP = 2; // m: the endless plane sits this far below the lowest terrain
 const GROUND_SIZE = 8000; // m
 
 /** Sample distances from s0 to s1 (wrapping), every STEP, including both ends. */
@@ -57,15 +63,31 @@ export function buildTrackMesh(world: TrackWorld): THREE.Group {
     offOut: (s: number) => number,
     color: (s: number) => string,
     lift = 0,
+    skipOverlap = false,
   ) => {
     const ss = samples(world, s0, s1);
     for (let k = 0; k < ss.length - 1; k++) {
       const a = ss[k]!, c = ss[k + 1]!;
+      if (skipOverlap && (overOther(a, D(a, left, offOut(a))) || overOther(c, D(c, left, offOut(c))))) continue;
       const ai = P(a, D(a, left, offIn(a)), lift), ao = P(a, D(a, left, offOut(a)), lift);
       const ci = P(c, D(c, left, offIn(c)), lift), co = P(c, D(c, left, offOut(c)), lift);
       if (left) b.quad(ai, ci, co, ao, color((a + c) / 2));
       else b.quad(ao, co, ci, ai, color((a + c) / 2));
     }
+  };
+
+  /**
+   * Is the point (s, d) actually over a DIFFERENT part of the track (e.g. under a bridge, or
+   * where two stretches run close)? Then the verge there must not be drawn.
+   */
+  const overOther = (s: number, d: number): boolean => {
+    const p = world.point(s, d);
+    const pr = world.project(p.x, p.z);
+    let ds = Math.abs(pr.s - world.wrap(s));
+    ds = Math.min(ds, world.length - ds);
+    if (ds < OTHER_SECTION_GAP) return false;
+    const l = pr.d >= 0;
+    return Math.abs(pr.d) < world.at(l ? world.wl : world.wr, pr.s) + world.wallAt(pr.s, l);
   };
 
   const stripes = (s: Surface) => (pos: number) =>
@@ -91,10 +113,9 @@ export function buildTrackMesh(world: TrackWorld): THREE.Group {
       (s) => Math.min(2, wallOff(s)),
       (s) => Math.min(17, wallOff(s)),
       wallOff,
-      (s) => wallOff(s) + VERGE_BEYOND_WALL,
     ];
     for (let k = 0; k < cuts.length - 1; k++) {
-      strip(base, 0, world.length, left, cuts[k]!, cuts[k + 1]!, () => sf[world.layout.verge]!.color);
+      strip(base, 0, world.length, left, cuts[k]!, cuts[k + 1]!, () => sf[world.layout.verge]!.color, 0, true);
     }
     // Painted edge line just inside the edge.
     const ew = world.layout.edgeLine.width;
@@ -126,10 +147,16 @@ export function buildTrackMesh(world: TrackWorld): THREE.Group {
     const ss = samples(world, 0, world.length);
     for (let k = 0; k < ss.length - 1; k++) {
       const a = ss[k]!, c = ss[k + 1]!;
-      const pa = P(a, D(a, left, world.wallAt(a, left)));
-      const pc = P(c, D(c, left, world.wallAt(c, left)));
+      const da = D(a, left, world.wallAt(a, left)), dc = D(c, left, world.wallAt(c, left));
+      const pa = P(a, da);
+      const pc = P(c, dc);
       const color = stripes(wallS)((a + c) / 2);
       walls.quad(pa, pc, [pc[0]!, pc[1]! + wallH, pc[2]!], [pa[0]!, pa[1]! + wallH, pa[2]!], color);
+      // Retaining wall from the verge down to the terrain where the track is raised (bridges, embankments).
+      const ta = world.terrainAt(pa[0]!, pa[2]!), tc = world.terrainAt(pc[0]!, pc[2]!);
+      if (pa[1]! - ta > SKIRT_MIN || pc[1]! - tc > SKIRT_MIN) {
+        if (!overOther(a, da) && !overOther(c, dc)) walls.quad([pa[0]!, ta, pa[2]!], [pc[0]!, tc, pc[2]!], pc, pa, SKIRT_COLOR);
+      }
     }
   }
 
@@ -141,7 +168,22 @@ export function buildTrackMesh(world: TrackWorld): THREE.Group {
   wallMesh.castShadow = true;
   group.add(wallMesh);
 
-  // Endless ground below everything.
+  // Terrain around the track (built by tools/track_builder.py), plus an endless plane beyond it.
+  const t = world.track.terrain;
+  let minH = 0;
+  if (t) {
+    const tb = new Builder();
+    const H = (i: number, j: number) => t.h[j * t.nx + i]!;
+    minH = Math.min(...t.h);
+    for (let j = 0; j < t.nz - 1; j++) {
+      for (let i = 0; i < t.nx - 1; i++) {
+        const x0 = t.x0 + i * t.cell, z0 = t.z0 + j * t.cell, x1 = x0 + t.cell, z1 = z0 + t.cell;
+        const shade = TERRAIN_SHADES[(i * 7 + j * 13) % TERRAIN_SHADES.length]!;
+        tb.quad([x0, H(i, j), z0], [x0, H(i, j + 1), z1], [x1, H(i + 1, j + 1), z1], [x1, H(i + 1, j), z0], shade);
+      }
+    }
+    group.add(tb.mesh(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide })));
+  }
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE),
     new THREE.MeshLambertMaterial({ color: sf[world.layout.verge]!.color }),
@@ -152,7 +194,7 @@ export function buildTrackMesh(world: TrackWorld): THREE.Group {
     cx += world.x[i]! / world.n;
     cz += world.z[i]! / world.n;
   }
-  ground.position.set(cx, -GROUND_DROP, cz);
+  ground.position.set(cx, minH - GROUND_DROP, cz);
   ground.receiveShadow = true;
   group.add(ground);
   return group;

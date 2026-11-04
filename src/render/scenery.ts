@@ -79,7 +79,7 @@ export function buildScenery(world: TrackWorld, file: SceneryFile): Scenery {
     const edge = world.at(left ? world.wl : world.wr, s);
     const d = (left ? 1 : -1) * (edge + off);
     const p = world.point(s, d);
-    return [p.x, Math.max(0, world.heightAt(s, d).h) + y, p.z];
+    return [p.x, world.heightAt(s, d).h + y, p.z];
   };
   const wall = (s: number, left: boolean) => world.wallAt(s, left);
   /** Exclusion zones for trees: [s0, s1, side, inner offset, outer offset]. */
@@ -152,6 +152,7 @@ export function buildScenery(world: TrackWorld, file: SceneryFile): Scenery {
     const left = t.side === 'left';
     zones.push({ s0: t.s - 15, s1: t.s + 15, left, o0: 0, o1: Infinity });
     const base = P(t.s, left, wall(t.s, left) + t.gap, 0);
+    base[1] = world.terrainAt(base[0]!, base[2]!);
     const h = world.headingAt(t.s);
     const body = new THREE.Mesh(new THREE.BoxGeometry(8, t.height, 8), new THREE.MeshLambertMaterial({ color: COLORS.tower, flatShading: true }));
     body.position.set(base[0]!, base[1]! + t.height / 2, base[2]!);
@@ -175,25 +176,29 @@ export function buildScenery(world: TrackWorld, file: SceneryFile): Scenery {
     const mid = world.point(s, (wl - wr) / 2);
     const h = world.headingAt(s);
     const deck = new THREE.Mesh(new THREE.BoxGeometry(wl + wr, thickness, depth), new THREE.MeshLambertMaterial({ color, flatShading: true }));
-    deck.position.set(mid.x, height, mid.z);
+    const base = world.heightAt(s, 0).h;
+    deck.position.set(mid.x, base + height, mid.z);
     deck.rotation.y = h;
     deck.castShadow = true;
     group.add(deck);
     if (band) {
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(wl + wr + 0.02, thickness * 0.35, depth + 0.02), new THREE.MeshLambertMaterial({ color: band }));
-      stripe.position.set(mid.x, height, mid.z);
+      stripe.position.set(mid.x, base + height, mid.z);
       stripe.rotation.y = h;
       group.add(stripe);
     }
     for (const d of [wl - 0.5, -(wr - 0.5)]) {
       const p = world.point(s, d);
       const pillar = new THREE.Mesh(new THREE.BoxGeometry(1, height, 1), new THREE.MeshLambertMaterial({ color }));
-      pillar.position.set(p.x, height / 2, p.z);
+      const pb = world.terrainAt(p.x, p.z);
+      const top = base + height;
+      pillar.scale.y = Math.max(0.1, (top - pb) / height);
+      pillar.position.set(p.x, (top + pb) / 2, p.z);
       pillar.rotation.y = h;
       pillar.castShadow = true;
       group.add(pillar);
     }
-    return { mid, h };
+    return { mid, h, base };
   };
   for (const br of file.bridges ?? []) {
     span(br.s, 7, 1.2, 3.5, COLORS.bridge, COLORS.bridgeBand);
@@ -203,13 +208,13 @@ export function buildScenery(world: TrackWorld, file: SceneryFile): Scenery {
   // Start gantry with five red lights over the track.
   const lights: THREE.MeshBasicMaterial[] = [];
   if (file.gantry) {
-    const { mid, h } = span(file.gantry.s, 6.5, 0.8, 1.2, COLORS.gantry, null);
+    const { mid, h, base } = span(file.gantry.s, 6.5, 0.8, 1.2, COLORS.gantry, null);
     // Left normal (-cos h, sin h); lights spread across the track, facing oncoming cars.
     for (let k = 0; k < 5; k++) {
       const off = (k - 2) * 1.2;
       const housing = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.5), new THREE.MeshLambertMaterial({ color: COLORS.gantry }));
       const x = mid.x - Math.cos(h) * off, z = mid.z + Math.sin(h) * off;
-      housing.position.set(x, 5.6, z);
+      housing.position.set(x, base + 5.6, z);
       housing.rotation.y = h;
       group.add(housing);
       for (const y of [5.85, 5.35]) {
@@ -217,7 +222,7 @@ export function buildScenery(world: TrackWorld, file: SceneryFile): Scenery {
         lights.push(mat);
         const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 4), mat);
         // Slightly towards the oncoming cars (backwards along the track = +forward reversed).
-        lamp.position.set(x + Math.sin(h) * 0.3, y, z + Math.cos(h) * 0.3);
+        lamp.position.set(x + Math.sin(h) * 0.3, base + y, z + Math.cos(h) * 0.3);
         group.add(lamp);
       }
     }
@@ -233,7 +238,7 @@ export function buildScenery(world: TrackWorld, file: SceneryFile): Scenery {
   // --- Trees: instanced trunks + crowns, scattered behind the walls, clear of every part of the track.
   if (file.trees) {
     const tr = file.trees;
-    const spots: { x: number; z: number; h: number; r: number }[] = [];
+    const spots: { x: number; y: number; z: number; h: number; r: number }[] = [];
     const inZone = (s: number, left: boolean, off: number) =>
       zones.some((zn) => zn.left === left && world.wrap(s - zn.s0) <= world.wrap(zn.s1 - zn.s0) && off >= zn.o0 && off <= zn.o1);
     for (let s = 0; s < world.length; s += tr.every) {
@@ -248,7 +253,7 @@ export function buildScenery(world: TrackWorld, file: SceneryFile): Scenery {
           const l2 = pr.d >= 0;
           const clear = Math.abs(pr.d) - world.at(l2 ? world.wl : world.wr, pr.s) - world.wallAt(pr.s, l2);
           if (clear < tr.clearance) continue;
-          spots.push({ x: p.x, z: p.z, h: 5 + rand() * 9, r: 2.2 + rand() * 2.4 });
+          spots.push({ x: p.x, y: world.terrainAt(p.x, p.z), z: p.z, h: 5 + rand() * 9, r: 2.2 + rand() * 2.4 });
         }
       }
     }
@@ -260,10 +265,10 @@ export function buildScenery(world: TrackWorld, file: SceneryFile): Scenery {
     const c = new THREE.Color();
     spots.forEach((t, i) => {
       const trunkH = t.h * 0.45;
-      m4.compose(new THREE.Vector3(t.x, trunkH / 2, t.z), q.identity(), new THREE.Vector3(1, trunkH, 1));
+      m4.compose(new THREE.Vector3(t.x, t.y + trunkH / 2, t.z), q.identity(), new THREE.Vector3(1, trunkH, 1));
       trunks.setMatrixAt(i, m4);
       q.setFromAxisAngle(up, rand() * Math.PI);
-      m4.compose(new THREE.Vector3(t.x, trunkH + t.r * 0.7, t.z), q, new THREE.Vector3(t.r, t.r * 1.2, t.r));
+      m4.compose(new THREE.Vector3(t.x, t.y + trunkH + t.r * 0.7, t.z), q, new THREE.Vector3(t.r, t.r * 1.2, t.r));
       crowns.setMatrixAt(i, m4);
       crowns.setColorAt(i, c.set(COLORS.leaves[i % COLORS.leaves.length]!));
     });

@@ -1,0 +1,165 @@
+{
+ "pitlane": {
+  "s_start": 6880,
+  "s_end": 300,
+  "side": "right"
+ },
+ "corners": [
+  {
+   "id": 1,
+   "name": "La Source hairpin",
+   "outside": "runoff",
+   "outside_width": 30,
+   "escape": true
+  },
+  {
+   "id": 2,
+   "name": "kink",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 3,
+   "name": "Eau Rouge",
+   "outside": "runoff",
+   "outside_width": 20
+  },
+  {
+   "id": 4,
+   "name": "Raidillon",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 5,
+   "name": "Raidillon top",
+   "outside": "runoff",
+   "outside_width": 25
+  },
+  {
+   "id": 6,
+   "name": "Kemmel kink",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 7,
+   "name": "Les Combes 1",
+   "outside": "runoff",
+   "outside_width": 30,
+   "escape": true
+  },
+  {
+   "id": 8,
+   "name": "Les Combes 2",
+   "outside": "runoff",
+   "outside_width": 20,
+   "sausage": true
+  },
+  {
+   "id": 9,
+   "name": "Les Combes 3",
+   "outside": "gravel",
+   "outside_width": 25
+  },
+  {
+   "id": 10,
+   "name": "Bruxelles",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 11,
+   "name": "Speakers corner",
+   "outside": "gravel",
+   "outside_width": 25
+  },
+  {
+   "id": 12,
+   "name": "Pouhon 1",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 13,
+   "name": "Pouhon 2",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 14,
+   "name": "Fagnes 1",
+   "outside": "runoff",
+   "outside_width": 25
+  },
+  {
+   "id": 15,
+   "name": "Fagnes 2",
+   "outside": "runoff",
+   "outside_width": 25
+  },
+  {
+   "id": 16,
+   "name": "Campus",
+   "outside": "runoff",
+   "outside_width": 25
+  },
+  {
+   "id": 17,
+   "name": "Stavelot",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 18,
+   "name": "kink",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 19,
+   "name": "kink",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 20,
+   "name": "Blanchimont 1",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 21,
+   "name": "Blanchimont 2",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 22,
+   "name": "kink",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 23,
+   "name": "Bus stop 1",
+   "outside": "runoff",
+   "outside_width": 25,
+   "sausage": true,
+   "escape": true
+  },
+  {
+   "id": 24,
+   "name": "Bus stop 2",
+   "outside": "runoff",
+   "outside_width": 25,
+   "sausage": true
+  }
+ ],
+ "note": "Per-corner surface spec (APPROXIMATE, from general knowledge). ids = corner numbers printed by tools/track_builder.py. Run tools/author_surfaces.py to regenerate surfaces.json."
+}

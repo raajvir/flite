@@ -10,12 +10,12 @@ import type { DriverInputs } from '../sim/types';
 
 /** Rates are in "full axis per second" (1.0 = 0 -> full in 1 s). */
 export const KEYBOARD_TUNING = {
-  steerBuild: 3.0,
-  steerReturn: 6.0,
+  steerBuild: 2.1,
+  steerReturn: 5.6,
   steerReverse: 9.0,
-  throttleBuild: 6.0,
+  throttleBuild: 7.0,
   throttleRelease: 10.0,
-  brakeBuild: 8.0,
+  brakeBuild: 6.0,
   brakeRelease: 12.0,
 };
 

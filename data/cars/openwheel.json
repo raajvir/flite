@@ -2,106 +2,556 @@
   "name": "Generic open-wheeler",
   "description": "Original generic open-wheel race car with mid-1990s proportions (short wheelbase, raised nose, small rims) and F2-class performance. Power and mass follow publicly quoted F2-class figures; everything else is an estimate. NOT measured data from any real car.",
   "visual": {
-    "length": { "value": 4.45, "unit": "m", "source": "estimate" },
-    "width": { "value": 2.0, "unit": "m", "source": "estimate" }
+    "length": {
+      "value": 4.45,
+      "unit": "m",
+      "source": "estimate"
+    },
+    "width": {
+      "value": 2.0,
+      "unit": "m",
+      "source": "estimate"
+    }
   },
   "sets": {
     "sim": {
-      "collisionAssist": { "value": 0, "unit": "-", "source": "design", "note": "0..1: how much of the spin and drag from car-to-car contact this car ignores" },
-      "collisionRadius": { "value": 0.95, "unit": "m", "source": "estimate", "note": "car body = two circles of this radius" },
-      "collisionOffset": { "value": 1.3, "unit": "m", "source": "estimate", "note": "circle centres this far ahead of / behind the CG" },
-      "mass": { "value": 755, "unit": "kg", "source": "estimate", "note": "car + driver; publicly quoted F2-class minimum weight" },
-      "yawInertia": { "value": 700, "unit": "kg*m^2", "source": "estimate" },
-      "wheelbase": { "value": 2.95, "unit": "m", "source": "estimate" },
-      "weightFront": { "value": 0.45, "unit": "-", "source": "estimate", "note": "fraction of static weight on the front axle" },
-      "cgHeight": { "value": 0.28, "unit": "m", "source": "estimate" },
-      "trackFront": { "value": 1.69, "unit": "m", "source": "estimate" },
-      "trackRear": { "value": 1.61, "unit": "m", "source": "estimate" },
-      "rollStiffnessFront": { "value": 0.55, "unit": "-", "source": "estimate", "note": "share of lateral load transfer taken by the front axle" },
-      "loadTransferLag": { "value": 0.06, "unit": "s", "source": "estimate", "note": "time constant standing in for suspension compliance" },
-      "bodyPitchGradient": { "value": 0.0012, "unit": "rad/(m/s^2)", "source": "estimate", "note": "steady body pitch per unit longitudinal accel (~0.7 deg per g)" },
-      "bodyRollGradient": { "value": 0.0015, "unit": "rad/(m/s^2)", "source": "estimate", "note": "steady body roll per unit lateral accel (~0.85 deg per g)" },
-      "suspensionFrequency": { "value": 3.6, "unit": "Hz", "source": "estimate", "note": "body pitch/roll natural frequency" },
-      "suspensionDamping": { "value": 0.6, "unit": "-", "source": "estimate", "note": "damping ratio; < 1 gives a small overshoot" },
-
-      "wheelRate": { "value": 60000, "unit": "N/m", "source": "estimate", "note": "suspension + tire vertical stiffness per wheel: a wheel pushed up by a kerb loads up by this much per metre" },
-      "wheelDamping": { "value": 2000, "unit": "N*s/m", "source": "estimate", "note": "damping per wheel: hitting a kerb fast gives a load spike" },
-      "maxWheelLoadSwing": { "value": 4, "unit": "-", "source": "estimate", "note": "kerb/bump load change is capped at this many times the wheel's static load" },
-      "dragArea": { "value": 1.05, "unit": "m^2", "source": "estimate", "note": "Cd * frontal area (F2-class guess)" },
-      "liftArea": { "value": 3.3, "unit": "m^2", "source": "estimate", "note": "Cl * frontal area (downforce, F2-class guess: less than a top-tier car)" },
-      "draftLength": { "value": 40, "unit": "m", "source": "estimate", "note": "slipstream reaches this far behind a car" },
-      "draftWidth": { "value": 1.6, "unit": "m", "source": "estimate", "note": "half-width of the slipstream right behind the car; it widens with distance" },
-      "draftSpread": { "value": 0.03, "unit": "m/m", "source": "estimate", "note": "slipstream half-width growth per metre behind" },
-      "draftMaxDragReduction": { "value": 0.35, "unit": "-", "source": "estimate", "note": "drag cut when tucked right in" },
-      "draftMaxLiftLoss": { "value": 0.2, "unit": "-", "source": "estimate", "note": "downforce lost in dirty air when tucked right in" },
-      "aeroBalanceFront": { "value": 0.42, "unit": "-", "source": "estimate" },
-
-      "maxSteerAngle": { "value": 0.32, "unit": "rad", "source": "estimate", "note": "road-wheel lock at standstill" },
-      "steerRate": { "value": 1.6, "unit": "rad/s", "source": "estimate", "note": "max road-wheel angle change rate" },
-      "steerSpeedFalloff": { "value": 32, "unit": "m/s", "source": "estimate", "note": "speed at which available lock halves (keyboard-friendly; lock = max / (1 + (u/falloff)^2))" },
-
-      "wheelRadius": { "value": 0.33, "unit": "m", "source": "estimate" },
-      "wheelInertiaFront": { "value": 1.0, "unit": "kg*m^2", "source": "estimate" },
-      "wheelInertiaRear": { "value": 1.3, "unit": "kg*m^2", "source": "estimate" },
-      "rollingResistance": { "value": 0.012, "unit": "-", "source": "estimate" },
-
-      "tireMuX": { "value": 1.75, "unit": "-", "source": "estimate", "note": "peak longitudinal friction at nominal load" },
-      "tireMuY": { "value": 1.8, "unit": "-", "source": "estimate", "note": "peak lateral friction at nominal load" },
-      "tireLoadSensitivity": { "value": 0.12, "unit": "-", "source": "estimate", "note": "mu drops by this fraction per +100% load over nominal" },
-      "tireNominalLoad": { "value": 3000, "unit": "N", "source": "estimate" },
-      "tirePeakSlipRatio": { "value": 0.1, "unit": "-", "source": "estimate" },
-      "tirePeakSlipAngle": { "value": 0.1, "unit": "rad", "source": "estimate" },
-      "tireShapeC": { "value": 1.45, "unit": "-", "source": "estimate", "note": "Pacejka C. Higher = sharper drop after the peak" },
-      "tireCurvatureE": { "value": 0.2, "unit": "-", "source": "estimate", "note": "Pacejka E" },
-      "tireRelaxationLength": { "value": 0.3, "unit": "m", "source": "estimate" },
-      "tireLowSpeed": { "value": 3.0, "unit": "m/s", "source": "estimate", "note": "slip denominators never go below this (numerical safety at standstill)" },
-
-      "engineTorqueCurve": { "value": [[4000, 190], [7000, 280], [9000, 350], [10500, 390], [11500, 385], [12500, 350]], "unit": "[rpm, N*m]", "source": "estimate", "note": "shape is a guess; scaled to ~460 kW (~620 hp) peak, the publicly quoted F2-class output" },
-      "idleRpm": { "value": 4000, "unit": "rpm", "source": "estimate" },
-      "revLimitRpm": { "value": 12500, "unit": "rpm", "source": "estimate" },
-      "engineBrakeTorque": { "value": 120, "unit": "N*m", "source": "estimate", "note": "closed-throttle torque at the rev limit, scales to 0 at idle" },
-      "gearRatios": { "value": [4.53, 3.67, 2.98, 2.42, 1.96, 1.59, 1.29, 1.05], "unit": "-", "source": "estimate", "note": "top gear tall enough that drag, not the limiter, sets top speed (so slipstreaming helps)" },
-      "reverseRatio": { "value": 4.0, "unit": "-", "source": "estimate" },
-      "finalDrive": { "value": 4.35, "unit": "-", "source": "estimate", "note": "geared so the limiter in top is just above the drag-limited top speed" },
-      "drivetrainEfficiency": { "value": 0.92, "unit": "-", "source": "estimate" },
-      "upshiftRpm": { "value": 12000, "unit": "rpm", "source": "estimate" },
-      "downshiftRpm": { "value": 7500, "unit": "rpm", "source": "estimate" },
-      "shiftTime": { "value": 0.04, "unit": "s", "source": "estimate" },
-      "reverseMaxSpeed": { "value": 8, "unit": "m/s", "source": "estimate" },
-      "reverseEngageSpeed": { "value": 0.5, "unit": "m/s", "source": "estimate", "note": "below this, holding brake selects reverse" },
-
-      "ersPower": { "value": 120000, "unit": "W", "source": "design", "note": "gameplay battery boost (Shift); F2-class cars have no ERS, this is a game feature" },
-      "ersCapacity": { "value": 2000000, "unit": "J", "source": "design", "note": "~17 s of full boost" },
-      "ersHarvestPower": { "value": 60000, "unit": "W", "source": "design", "note": "recharge rate under full braking" },
-      "ersHarvestMinSpeed": { "value": 5, "unit": "m/s", "source": "design" },
-      "diffLocking": { "value": 150, "unit": "N*m*s/rad", "source": "estimate", "note": "limited-slip: torque moved per rad/s of wheel speed difference" },
-      "diffMaxLockTorque": { "value": 800, "unit": "N*m", "source": "estimate" },
-
-      "brakeMaxTorque": { "value": 14000, "unit": "N*m", "source": "estimate", "note": "total, all four wheels" },
-      "brakeBiasFront": { "value": 0.58, "unit": "-", "source": "estimate" },
-
-      "absEnabled": { "value": 0, "unit": "bool", "source": "design" },
-      "absSlip": { "value": 0.12, "unit": "-", "source": "design" },
-      "tcsEnabled": { "value": 0, "unit": "bool", "source": "design" },
-      "tcsSlip": { "value": 1.1, "unit": "-", "source": "design", "note": "combined slip / peak slip; 1 = at the tire peak" },
-      "stabilityAssist": { "value": 0, "unit": "N*m*s/rad", "source": "design", "note": "yaw damping towards the steered yaw rate; 0 = off" },
-      "stabilityGripFraction": { "value": 0.85, "unit": "-", "source": "design", "note": "assist targets yaw rate up to this fraction of the tires' current lateral grip" },
-      "stabilityFadeSpeed": { "value": 8, "unit": "m/s", "source": "design", "note": "assist fades in from 0 to full by this speed" },
-      "assistLockRelease": { "value": 1.0, "unit": "-", "source": "design", "note": "how far TCS + stability assist back off in donut mode (full lock + full throttle, slow); 1 = fully off" },
-      "assistReleaseSpeed": { "value": 8, "unit": "m/s", "source": "design", "note": "donut mode only below this speed; assists fully back by 2x this" }
+      "collisionAssist": {
+        "value": 0,
+        "unit": "-",
+        "source": "design",
+        "note": "0..1: how much of the spin and drag from car-to-car contact this car ignores"
+      },
+      "collisionRadius": {
+        "value": 0.95,
+        "unit": "m",
+        "source": "estimate",
+        "note": "car body = two circles of this radius"
+      },
+      "collisionOffset": {
+        "value": 1.3,
+        "unit": "m",
+        "source": "estimate",
+        "note": "circle centres this far ahead of / behind the CG"
+      },
+      "mass": {
+        "value": 755,
+        "unit": "kg",
+        "source": "estimate",
+        "note": "car + driver; publicly quoted F2-class minimum weight"
+      },
+      "yawInertia": {
+        "value": 700,
+        "unit": "kg*m^2",
+        "source": "estimate"
+      },
+      "wheelbase": {
+        "value": 2.95,
+        "unit": "m",
+        "source": "estimate"
+      },
+      "weightFront": {
+        "value": 0.45,
+        "unit": "-",
+        "source": "estimate",
+        "note": "fraction of static weight on the front axle"
+      },
+      "cgHeight": {
+        "value": 0.28,
+        "unit": "m",
+        "source": "estimate"
+      },
+      "trackFront": {
+        "value": 1.69,
+        "unit": "m",
+        "source": "estimate"
+      },
+      "trackRear": {
+        "value": 1.61,
+        "unit": "m",
+        "source": "estimate"
+      },
+      "rollStiffnessFront": {
+        "value": 0.55,
+        "unit": "-",
+        "source": "estimate",
+        "note": "share of lateral load transfer taken by the front axle"
+      },
+      "loadTransferLag": {
+        "value": 0.06,
+        "unit": "s",
+        "source": "estimate",
+        "note": "time constant standing in for suspension compliance"
+      },
+      "bodyPitchGradient": {
+        "value": 0.0012,
+        "unit": "rad/(m/s^2)",
+        "source": "estimate",
+        "note": "steady body pitch per unit longitudinal accel (~0.7 deg per g)"
+      },
+      "bodyRollGradient": {
+        "value": 0.0015,
+        "unit": "rad/(m/s^2)",
+        "source": "estimate",
+        "note": "steady body roll per unit lateral accel (~0.85 deg per g)"
+      },
+      "suspensionFrequency": {
+        "value": 3.6,
+        "unit": "Hz",
+        "source": "estimate",
+        "note": "body pitch/roll natural frequency"
+      },
+      "suspensionDamping": {
+        "value": 0.6,
+        "unit": "-",
+        "source": "estimate",
+        "note": "damping ratio; < 1 gives a small overshoot"
+      },
+      "wheelRate": {
+        "value": 60000,
+        "unit": "N/m",
+        "source": "estimate",
+        "note": "suspension + tire vertical stiffness per wheel: a wheel pushed up by a kerb loads up by this much per metre"
+      },
+      "wheelDamping": {
+        "value": 2000,
+        "unit": "N*s/m",
+        "source": "estimate",
+        "note": "damping per wheel: hitting a kerb fast gives a load spike"
+      },
+      "maxWheelLoadSwing": {
+        "value": 4,
+        "unit": "-",
+        "source": "estimate",
+        "note": "kerb/bump load change is capped at this many times the wheel's static load"
+      },
+      "dragArea": {
+        "value": 1.05,
+        "unit": "m^2",
+        "source": "estimate",
+        "note": "Cd * frontal area (F2-class guess)"
+      },
+      "liftArea": {
+        "value": 3.3,
+        "unit": "m^2",
+        "source": "estimate",
+        "note": "Cl * frontal area (downforce, F2-class guess: less than a top-tier car)"
+      },
+      "draftLength": {
+        "value": 40,
+        "unit": "m",
+        "source": "estimate",
+        "note": "slipstream reaches this far behind a car"
+      },
+      "draftWidth": {
+        "value": 1.6,
+        "unit": "m",
+        "source": "estimate",
+        "note": "half-width of the slipstream right behind the car; it widens with distance"
+      },
+      "draftSpread": {
+        "value": 0.03,
+        "unit": "m/m",
+        "source": "estimate",
+        "note": "slipstream half-width growth per metre behind"
+      },
+      "draftMaxDragReduction": {
+        "value": 0.35,
+        "unit": "-",
+        "source": "estimate",
+        "note": "drag cut when tucked right in"
+      },
+      "draftMaxLiftLoss": {
+        "value": 0.2,
+        "unit": "-",
+        "source": "estimate",
+        "note": "downforce lost in dirty air when tucked right in"
+      },
+      "aeroBalanceFront": {
+        "value": 0.42,
+        "unit": "-",
+        "source": "estimate"
+      },
+      "maxSteerAngle": {
+        "value": 0.32,
+        "unit": "rad",
+        "source": "estimate",
+        "note": "road-wheel lock at standstill"
+      },
+      "steerRate": {
+        "value": 1.6,
+        "unit": "rad/s",
+        "source": "estimate",
+        "note": "max road-wheel angle change rate"
+      },
+      "steerSpeedFalloff": {
+        "value": 32,
+        "unit": "m/s",
+        "source": "estimate",
+        "note": "speed at which available lock halves (keyboard-friendly; lock = max / (1 + (u/falloff)^2))"
+      },
+      "wheelRadius": {
+        "value": 0.33,
+        "unit": "m",
+        "source": "estimate"
+      },
+      "wheelInertiaFront": {
+        "value": 1.0,
+        "unit": "kg*m^2",
+        "source": "estimate"
+      },
+      "wheelInertiaRear": {
+        "value": 1.3,
+        "unit": "kg*m^2",
+        "source": "estimate"
+      },
+      "rollingResistance": {
+        "value": 0.012,
+        "unit": "-",
+        "source": "estimate"
+      },
+      "tireMuX": {
+        "value": 1.75,
+        "unit": "-",
+        "source": "estimate",
+        "note": "peak longitudinal friction at nominal load"
+      },
+      "tireMuY": {
+        "value": 2.2,
+        "unit": "-",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "tireLoadSensitivity": {
+        "value": 0.12,
+        "unit": "-",
+        "source": "estimate",
+        "note": "mu drops by this fraction per +100% load over nominal"
+      },
+      "tireNominalLoad": {
+        "value": 3000,
+        "unit": "N",
+        "source": "estimate"
+      },
+      "tirePeakSlipRatio": {
+        "value": 0.1,
+        "unit": "-",
+        "source": "estimate"
+      },
+      "tirePeakSlipAngle": {
+        "value": 0.1,
+        "unit": "rad",
+        "source": "estimate"
+      },
+      "tireShapeC": {
+        "value": 1.45,
+        "unit": "-",
+        "source": "estimate",
+        "note": "Pacejka C. Higher = sharper drop after the peak"
+      },
+      "tireCurvatureE": {
+        "value": 0.2,
+        "unit": "-",
+        "source": "estimate",
+        "note": "Pacejka E"
+      },
+      "tireRelaxationLength": {
+        "value": 0.3,
+        "unit": "m",
+        "source": "estimate"
+      },
+      "tireLowSpeed": {
+        "value": 3.0,
+        "unit": "m/s",
+        "source": "estimate",
+        "note": "slip denominators never go below this (numerical safety at standstill)"
+      },
+      "engineTorqueCurve": {
+        "value": [
+          [
+            4000,
+            190
+          ],
+          [
+            7000,
+            280
+          ],
+          [
+            9000,
+            350
+          ],
+          [
+            10500,
+            390
+          ],
+          [
+            11500,
+            385
+          ],
+          [
+            12500,
+            350
+          ]
+        ],
+        "unit": "[rpm, N*m]",
+        "source": "estimate",
+        "note": "shape is a guess; scaled to ~460 kW (~620 hp) peak, the publicly quoted F2-class output"
+      },
+      "idleRpm": {
+        "value": 4000,
+        "unit": "rpm",
+        "source": "estimate"
+      },
+      "revLimitRpm": {
+        "value": 12500,
+        "unit": "rpm",
+        "source": "estimate"
+      },
+      "engineBrakeTorque": {
+        "value": 120,
+        "unit": "N*m",
+        "source": "estimate",
+        "note": "closed-throttle torque at the rev limit, scales to 0 at idle"
+      },
+      "gearRatios": {
+        "value": [
+          4.53,
+          3.67,
+          2.98,
+          2.42,
+          1.96,
+          1.59,
+          1.29,
+          1.05
+        ],
+        "unit": "-",
+        "source": "estimate",
+        "note": "top gear tall enough that drag, not the limiter, sets top speed (so slipstreaming helps)"
+      },
+      "reverseRatio": {
+        "value": 4.0,
+        "unit": "-",
+        "source": "estimate"
+      },
+      "finalDrive": {
+        "value": 4.35,
+        "unit": "-",
+        "source": "estimate",
+        "note": "geared so the limiter in top is just above the drag-limited top speed"
+      },
+      "drivetrainEfficiency": {
+        "value": 0.92,
+        "unit": "-",
+        "source": "estimate"
+      },
+      "upshiftRpm": {
+        "value": 12000,
+        "unit": "rpm",
+        "source": "estimate"
+      },
+      "downshiftRpm": {
+        "value": 7500,
+        "unit": "rpm",
+        "source": "estimate"
+      },
+      "shiftTime": {
+        "value": 0.04,
+        "unit": "s",
+        "source": "estimate"
+      },
+      "reverseMaxSpeed": {
+        "value": 8,
+        "unit": "m/s",
+        "source": "estimate"
+      },
+      "reverseEngageSpeed": {
+        "value": 0.5,
+        "unit": "m/s",
+        "source": "estimate",
+        "note": "below this, holding brake selects reverse"
+      },
+      "ersPower": {
+        "value": 120000,
+        "unit": "W",
+        "source": "design",
+        "note": "gameplay battery boost (Shift); F2-class cars have no ERS, this is a game feature"
+      },
+      "ersCapacity": {
+        "value": 2000000,
+        "unit": "J",
+        "source": "design",
+        "note": "~17 s of full boost"
+      },
+      "ersHarvestPower": {
+        "value": 60000,
+        "unit": "W",
+        "source": "design",
+        "note": "recharge rate under full braking"
+      },
+      "ersHarvestMinSpeed": {
+        "value": 5,
+        "unit": "m/s",
+        "source": "design"
+      },
+      "diffLocking": {
+        "value": 150,
+        "unit": "N*m*s/rad",
+        "source": "estimate",
+        "note": "limited-slip: torque moved per rad/s of wheel speed difference"
+      },
+      "diffMaxLockTorque": {
+        "value": 800,
+        "unit": "N*m",
+        "source": "estimate"
+      },
+      "brakeMaxTorque": {
+        "value": 14000,
+        "unit": "N*m",
+        "source": "estimate",
+        "note": "total, all four wheels"
+      },
+      "brakeBiasFront": {
+        "value": 0.58,
+        "unit": "-",
+        "source": "estimate"
+      },
+      "absEnabled": {
+        "value": 1,
+        "unit": "bool",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "absSlip": {
+        "value": 0.09,
+        "unit": "-",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "tcsEnabled": {
+        "value": 1,
+        "unit": "bool",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "tcsSlip": {
+        "value": 0.9,
+        "unit": "-",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "stabilityAssist": {
+        "value": 2000,
+        "unit": "N*m*s/rad",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "stabilityGripFraction": {
+        "value": 0.7,
+        "unit": "-",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "stabilityFadeSpeed": {
+        "value": 8,
+        "unit": "m/s",
+        "source": "design",
+        "note": "assist fades in from 0 to full by this speed"
+      },
+      "assistLockRelease": {
+        "value": 0.8,
+        "unit": "-",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "assistReleaseSpeed": {
+        "value": 8,
+        "unit": "m/s",
+        "source": "design",
+        "note": "donut mode only below this speed; assists fully back by 2x this"
+      }
     },
     "feel": {
       "inherits": "sim",
-      "tireMuX": { "value": 2.0, "unit": "-", "source": "design", "note": "feel: more grip" },
-      "tireMuY": { "value": 2.1, "unit": "-", "source": "design", "note": "feel: more grip" },
-      "tireShapeC": { "value": 1.25, "unit": "-", "source": "design", "note": "feel: gentle drop after the peak, slides are catchable" },
-      "tirePeakSlipAngle": { "value": 0.11, "unit": "rad", "source": "design" },
-      "steerRate": { "value": 2.2, "unit": "rad/s", "source": "design", "note": "feel: quicker turn-in" },
-      "absEnabled": { "value": 1, "unit": "bool", "source": "design" },
-      "tcsEnabled": { "value": 1, "unit": "bool", "source": "design" },
-      "stabilityAssist": { "value": 8000, "unit": "N*m*s/rad", "source": "design", "note": "feel: strong yaw damping" },
-      "collisionAssist": { "value": 0.7, "unit": "-", "source": "design", "note": "feel: touching wheels doesn't drag or spin you" },
-      "rollStiffnessFront": { "value": 0.6, "unit": "-", "source": "design", "note": "feel: a touch more understeer, rear stays planted" }
+      "tireMuX": {
+        "value": 2.0,
+        "unit": "-",
+        "source": "design",
+        "note": "feel: more grip"
+      },
+      "tireMuY": {
+        "value": 2.1,
+        "unit": "-",
+        "source": "design",
+        "note": "feel: more grip"
+      },
+      "tireShapeC": {
+        "value": 1.25,
+        "unit": "-",
+        "source": "design",
+        "note": "feel: gentle drop after the peak, slides are catchable"
+      },
+      "tirePeakSlipAngle": {
+        "value": 0.11,
+        "unit": "rad",
+        "source": "design"
+      },
+      "steerRate": {
+        "value": 2.2,
+        "unit": "rad/s",
+        "source": "design",
+        "note": "feel: quicker turn-in"
+      },
+      "absEnabled": {
+        "value": 1,
+        "unit": "bool",
+        "source": "design"
+      },
+      "tcsEnabled": {
+        "value": 1,
+        "unit": "bool",
+        "source": "design"
+      },
+      "stabilityAssist": {
+        "value": 8000,
+        "unit": "N*m*s/rad",
+        "source": "design",
+        "note": "feel: strong yaw damping"
+      },
+      "collisionAssist": {
+        "value": 0.7,
+        "unit": "-",
+        "source": "design",
+        "note": "feel: touching wheels doesn't drag or spin you"
+      },
+      "rollStiffnessFront": {
+        "value": 0.6,
+        "unit": "-",
+        "source": "design",
+        "note": "feel: a touch more understeer, rear stays planted"
+      },
+      "assistLockRelease": {
+        "value": 1.0,
+        "unit": "-",
+        "source": "design",
+        "note": "feel: full donut mode (pinned so the sim change below doesn't alter feel)"
+      },
+      "tcsSlip": {
+        "value": 0.75,
+        "unit": "-",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "absSlip": {
+        "value": 0.08,
+        "unit": "-",
+        "source": "design",
+        "note": "owner-tuned default"
+      },
+      "stabilityGripFraction": {
+        "value": 0.78,
+        "unit": "-",
+        "source": "design",
+        "note": "owner-tuned default"
+      }
     }
   }
 }

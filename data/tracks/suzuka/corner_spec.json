@@ -1,0 +1,169 @@
+{
+ "pitlane": {
+  "s_start": 5700,
+  "s_end": 300,
+  "side": "right"
+ },
+ "corners": [
+  {
+   "id": 1,
+   "name": "First curve",
+   "outside": "gravel",
+   "outside_width": 35
+  },
+  {
+   "id": 2,
+   "name": "Second curve",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 3,
+   "name": "Esses 1",
+   "outside": "gravel",
+   "outside_width": 20
+  },
+  {
+   "id": 4,
+   "name": "Esses 2",
+   "outside": "gravel",
+   "outside_width": 20
+  },
+  {
+   "id": 5,
+   "name": "Esses 3",
+   "outside": "gravel",
+   "outside_width": 20
+  },
+  {
+   "id": 6,
+   "name": "Esses 4",
+   "outside": "gravel",
+   "outside_width": 20
+  },
+  {
+   "id": 7,
+   "name": "Dunlop entry",
+   "outside": "gravel",
+   "outside_width": 25
+  },
+  {
+   "id": 8,
+   "name": "Dunlop",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 9,
+   "name": "Dunlop 2",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 10,
+   "name": "Dunlop exit",
+   "outside": "gravel",
+   "outside_width": 25
+  },
+  {
+   "id": 11,
+   "name": "Degner 1",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 12,
+   "name": "Degner 2",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 13,
+   "name": "Under the bridge",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 14,
+   "name": "Hairpin",
+   "outside": "runoff",
+   "outside_width": 30,
+   "escape": true
+  },
+  {
+   "id": 15,
+   "name": "kink",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 16,
+   "name": "200R",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 17,
+   "name": "kink",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 18,
+   "name": "long right",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 19,
+   "name": "Spoon",
+   "outside": "gravel",
+   "outside_width": 35
+  },
+  {
+   "id": 20,
+   "name": "130R",
+   "outside": "gravel",
+   "outside_width": 40
+  },
+  {
+   "id": 21,
+   "name": "130R exit",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 22,
+   "name": "Final chicane 1",
+   "outside": "runoff",
+   "outside_width": 25,
+   "sausage": true,
+   "escape": true
+  },
+  {
+   "id": 23,
+   "name": "Final chicane 2",
+   "outside": "runoff",
+   "outside_width": 25,
+   "sausage": true
+  },
+  {
+   "id": 24,
+   "name": "Last corner",
+   "outside": "runoff",
+   "outside_width": 25
+  },
+  {
+   "id": 25,
+   "name": "Last corner exit",
+   "outside": "runoff",
+   "outside_width": 20
+  }
+ ],
+ "note": "Per-corner surface spec (APPROXIMATE, from general knowledge). ids = corner numbers printed by tools/track_builder.py. Run tools/author_surfaces.py to regenerate surfaces.json."
+}

@@ -1,0 +1,23 @@
+{
+  "display_name": "Japanese circuit",
+  "official_length_m": 5807,
+  "geo": {
+    "bbox": [
+      34.832,
+      136.525,
+      34.852,
+      136.55
+    ],
+    "dataset": "srtm30m"
+  },
+  "start_s_m": 0,
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": [],
+  "crossovers": [
+    {
+      "note": "the back straight towards 130R passes over the section between Degner and the hairpin",
+      "over_near_s": 4920,
+      "clearance_m": 7.5
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+ "grandstands": [
+  {
+   "s_start": 5780,
+   "s_end": 200,
+   "side": "left",
+   "gap": 4,
+   "rows": 12,
+   "roof": true
+  },
+  {
+   "s_start": 330,
+   "s_end": 460,
+   "side": "left",
+   "gap": 3,
+   "rows": 10,
+   "roof": false
+  },
+  {
+   "s_start": 850,
+   "s_end": 1000,
+   "side": "left",
+   "gap": 3,
+   "rows": 9,
+   "roof": false
+  },
+  {
+   "s_start": 3040,
+   "s_end": 3200,
+   "side": "left",
+   "gap": 3,
+   "rows": 10,
+   "roof": true
+  },
+  {
+   "s_start": 3560,
+   "s_end": 3750,
+   "side": "left",
+   "gap": 3,
+   "rows": 9,
+   "roof": false
+  },
+  {
+   "s_start": 5040,
+   "s_end": 5200,
+   "side": "left",
+   "gap": 3,
+   "rows": 10,
+   "roof": false
+  },
+  {
+   "s_start": 5470,
+   "s_end": 5560,
+   "side": "left",
+   "gap": 3,
+   "rows": 9,
+   "roof": false
+  }
+ ],
+ "pits": {
+  "s_start": 5750,
+  "s_end": 300,
+  "side": "right",
+  "gap": 1,
+  "depth": 18,
+  "height": 12
+ },
+ "towers": [
+  {
+   "s": 180,
+   "side": "right",
+   "gap": 25,
+   "height": 22
+  }
+ ],
+ "bridges": [
+  {
+   "s": 1500
+  },
+  {
+   "s": 4500
+  }
+ ],
+ "gantry": {
+  "s": 0
+ },
+ "trees": {
+  "every": 8,
+  "perStation": 2,
+  "minGap": 10,
+  "maxGap": 150,
+  "clearance": 6,
+  "seed": 5
+ },
+ "description": "Scenery (generic, original structures; positions APPROXIMATE). s = distance from the start line, gap = metres behind the wall."
+}

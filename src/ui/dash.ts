@@ -3,6 +3,7 @@
  * per-tire grip, position and lap times. Plain DOM, updated every frame.
  */
 import type { CarParams } from '../sim/params';
+import { loadFactor } from '../sim/tire';
 import type { SurfaceTable } from '../sim/surfaces';
 import type { CarState } from '../sim/types';
 
@@ -30,7 +31,9 @@ const CSS = `
 #dash .draft > b { background: #9ad11f; }
 #dash .boost { color: #5ff0ff; font-weight: 800; text-shadow: 0 0 8px #5ff0ff; visibility: hidden; margin-left: 6px; }
 #dash .tires { display: grid; grid-template-columns: 22px 22px; gap: 4px 10px; margin-top: 4px; }
-#dash .tire { width: 22px; height: 30px; border-radius: 5px; background: #2ecc40; }
+#dash .tire { position: relative; width: 22px; height: 30px; border-radius: 5px; background: #2a3440;
+  overflow: hidden; box-sizing: border-box; border: 2px solid transparent; }
+#dash .tire > b { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: #5ff0ff; }
 #dash .surf { font-size: 10px; color: #c9d4de; min-height: 12px; }
 `;
 
@@ -72,6 +75,7 @@ export class Dash {
   private readonly boost = el('span', 'boost', 'BOOST');
   private readonly draftBar = el('b');
   private readonly tires: HTMLElement[] = [];
+  private readonly tireFill: HTMLElement[] = [];
   private readonly surf = el('div', 'surf');
 
   constructor() {
@@ -107,7 +111,10 @@ export class Dash {
     const tires = el('div', 'tires');
     for (let i = 0; i < 4; i++) {
       const t = el('div', 'tire');
+      const fill = el('b');
+      t.append(fill);
       this.tires.push(t);
+      this.tireFill.push(fill);
       tires.append(t);
     }
     grip.append(el('div', 'label', 'grip'), tires, this.surf);
@@ -150,12 +157,22 @@ export class Dash {
     this.boost.style.visibility = s.ersDeploy > 0 ? 'visible' : 'hidden';
     this.draftBar.style.width = `${((race?.draft ?? 0) * 100).toFixed(0)}%`;
 
-    // Tires: colour by combined slip (green ok, yellow working, red sliding); note non-asphalt surfaces.
+    // Tires: fill = share of the grip available right now (at this load, on this surface) that
+    // the tire is using; more opaque as it rises. Red outline = past the peak (sliding).
     const offAsphalt = new Set<string>();
+    const tp = p.derived.tire;
     s.wheels.forEach((w, i) => {
+      const surf = surfaces.list[w.surface];
+      const mu = loadFactor(w.load, tp) * (surf?.grip ?? 1);
+      const peakX = tp.muX * mu * w.load, peakY = tp.muY * mu * w.load;
+      const used = w.load > 1 && peakX > 0 ? Math.hypot(w.fx / peakX, w.fy / peakY) : 0;
       const rho = Math.hypot(w.kappa / p.tirePeakSlipRatio, w.tanAlpha / Math.tan(p.tirePeakSlipAngle));
-      this.tires[i]!.style.background = rho < 0.6 ? '#2ecc40' : rho < 1.0 ? '#ffd21f' : '#ff3b30';
-      const name = surfaces.list[w.surface]?.name ?? '';
+      const k = Math.min(1, used);
+      const fill = this.tireFill[i]!;
+      fill.style.height = `${(k * 100).toFixed(0)}%`;
+      fill.style.opacity = (0.25 + 0.75 * k).toFixed(2);
+      this.tires[i]!.style.borderColor = rho > 1 ? '#ff3b30' : 'transparent';
+      const name = surf?.name ?? '';
       if (name && name !== 'asphalt') offAsphalt.add(name.replace('_', ' '));
     });
     this.surf.textContent = [...offAsphalt].join(', ');

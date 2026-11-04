@@ -1,0 +1,16 @@
+{
+  "display_name": "British circuit",
+  "official_length_m": 5891,
+  "geo": {
+    "bbox": [
+      52.058,
+      -1.04,
+      52.085,
+      -0.995
+    ],
+    "dataset": "eudem25m"
+  },
+  "start_s_m": 0,
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": []
+}

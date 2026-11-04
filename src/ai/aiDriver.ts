@@ -92,6 +92,11 @@ export function planBrakingDecel(p: CarParams, skill: number, v: number): number
   return (muX * (p.mass * GRAVITY + aeroK * v * v)) / p.mass + (dragK * v * v) / p.mass;
 }
 
+/** The tires give a little more than the assist's target before it intervenes. */
+const STABILITY_PLAN_MARGIN = 0.1;
+/** Crests are judged over +-this many samples (worst = most negative curvature). */
+const VERT_SMOOTH = 10;
+
 /** Precomputed racing line + speed plan for one car type and skill. */
 export class RacingPlan {
   readonly vmax: Float64Array;
@@ -130,13 +135,18 @@ export class RacingPlan {
       kSmooth[i] = m;
     }
 
-    const mu = p.tireMuY * skill;
+    // The stability assist only lets the car turn on a share of its grip: plan within that.
+    const lateralShare = p.stabilityAssist > 0 ? Math.min(skill, p.stabilityGripFraction + STABILITY_PLAN_MARGIN) : skill;
+    const mu = p.tireMuY * lateralShare;
     const aeroK = 0.5 * AIR_DENSITY * p.liftArea; // downforce = aeroK v^2
     const dragK = 0.5 * AIR_DENSITY * p.dragArea;
     const v = new Float64Array(n);
     for (let i = 0; i < n; i++) {
-      // m v^2 kappa = mu (m g + aeroK v^2)  =>  v^2 = mu m g / (m kappa - mu aeroK)
-      const den = p.mass * kSmooth[i]! - mu * aeroK;
+      // Vertical curvature (crest < 0, dip > 0) changes the load: m g -> m (g + v^2 kv).
+      let kv = 0;
+      for (let j = -VERT_SMOOTH; j <= VERT_SMOOTH; j++) kv = Math.min(kv, world.elevD2[(i + j + n) % n]!);
+      // m v^2 kappa = mu (m g + m v^2 kv + aeroK v^2)  =>  v^2 = mu m g / (m kappa - mu aeroK - mu m kv)
+      const den = p.mass * kSmooth[i]! - mu * aeroK - mu * p.mass * kv;
       v[i] = den <= 0 ? t.maxSpeed : Math.min(t.maxSpeed, Math.sqrt((mu * p.mass * GRAVITY) / den));
     }
     // Backward pass (braking) and forward pass (acceleration), twice round the loop.

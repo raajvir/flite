@@ -26,12 +26,20 @@ from pathlib import Path
 
 import numpy as np
 from scipy.interpolate import splev, splprep
+from scipy.ndimage import gaussian_filter, gaussian_filter1d
+from scipy.spatial import cKDTree
 
 ROOT = Path(__file__).resolve().parent.parent
 DS = 2.0  # m between samples
 SMOOTHING_PER_POINT = 0.05  # spline smoothing (m^2 per input point): removes survey noise, keeps shape
 CORNER_KAPPA = 1 / 400  # curvature above this counts as "in a corner" (radius < 400 m)
 CORNER_MIN_LENGTH = 20.0  # m; shorter curvature blips are ignored
+ELEV_SMOOTH_SIGMA = 40.0  # m: Gaussian smoothing of raw DEM samples along the lap (removes trees/noise)
+CROSSOVER_RAMP = 160.0  # m over which a bridge rises to its clearance
+TERRAIN_CELL = 25.0  # m grid spacing of the surrounding terrain
+TERRAIN_MARGIN = 450.0  # m of terrain beyond the track's bounding box
+TERRAIN_SMOOTH = 2.0  # cells: Gaussian smoothing of the terrain grid
+TERRAIN_DROP = 0.3  # m: terrain sits this far below the road near the track (no flicker)
 
 
 @dataclass
@@ -158,6 +166,73 @@ def detect_corners(track: Track) -> list[dict]:
     return corners
 
 
+def elevation_profile(track: Track, tdir: Path) -> np.ndarray | None:
+    """Smoothed elevation per sample from raw/elevation.csv (relative to the start line), or None."""
+    f = tdir / "raw" / "elevation.csv"
+    if not f.exists():
+        return None
+    raw = np.loadtxt(f, delimiter=",", comments="#")
+    s_raw, z_raw = raw[:, 0], raw[:, 3]
+    # Periodic interpolation onto our samples, then periodic smoothing.
+    z = np.interp(track.s, np.append(s_raw, track.length), np.append(z_raw, z_raw[0]))
+    z = gaussian_filter1d(z, ELEV_SMOOTH_SIGMA / DS, mode="wrap")
+    return z - z[0]
+
+
+def find_crossovers(track: Track) -> list[tuple[float, float]]:
+    """Distances (s1, s2) where the centreline crosses itself (segment intersection)."""
+    x, z, n = track.x, track.z, len(track.s)
+    out = []
+    for i in range(n):
+        a0, a1 = np.array([x[i], z[i]]), np.array([x[(i + 1) % n], z[(i + 1) % n]])
+        for j in range(i + 10, n - (10 if i < 10 else 0)):
+            b0, b1 = np.array([x[j], z[j]]), np.array([x[(j + 1) % n], z[(j + 1) % n]])
+            d = (a1[0] - a0[0]) * (b1[1] - b0[1]) - (a1[1] - a0[1]) * (b1[0] - b0[0])
+            if abs(d) < 1e-9:
+                continue
+            ta = ((b0[0] - a0[0]) * (b1[1] - b0[1]) - (b0[1] - a0[1]) * (b1[0] - b0[0])) / d
+            tb = ((b0[0] - a0[0]) * (a1[1] - a0[1]) - (b0[1] - a0[1]) * (a1[0] - a0[0])) / d
+            if 0 <= ta < 1 and 0 <= tb < 1:
+                out.append((float(track.s[i] + ta * DS), float(track.s[j] + tb * DS)))
+    return out
+
+
+def apply_crossovers(track: Track, elev: np.ndarray, meta: dict, crossings: list[tuple[float, float]]) -> np.ndarray:
+    """Lift the 'over' branch of each crossover to clearance above the 'under' branch, smoothly."""
+    elev = elev.copy()
+    for spec in meta.get("crossovers", []):
+        # Pick the detected crossing nearest to the authored hint.
+        best = min(crossings, key=lambda c: min(abs(c[0] - spec["over_near_s"]), abs(c[1] - spec["over_near_s"])), default=None)
+        if best is None:
+            raise SystemExit("meta.json lists a crossover but the centreline never crosses itself")
+        s_over, s_under = best if abs(best[0] - spec["over_near_s"]) < abs(best[1] - spec["over_near_s"]) else best[::-1]
+        need = np.interp(s_under, track.s, elev) + spec["clearance_m"]
+        rel = (track.s - s_over + track.length / 2) % track.length - track.length / 2
+        w = np.clip(1 - np.abs(rel) / CROSSOVER_RAMP, 0, 1)
+        w = 0.5 - 0.5 * np.cos(np.pi * w)  # smooth ramp
+        lift = max(0.0, need - np.interp(s_over, track.s, elev))
+        elev += w * lift
+        spec["s_over"], spec["s_under"] = round(s_over, 1), round(s_under, 1)
+    return elev
+
+
+def terrain_grid(track: Track, elev: np.ndarray) -> dict:
+    """Height grid around the track: each point takes the elevation of the nearest track sample
+    (the LOWEST nearby one at crossovers, so bridges span a gap), smoothed, a little below the road."""
+    gx = np.arange(track.x.min() - TERRAIN_MARGIN, track.x.max() + TERRAIN_MARGIN + TERRAIN_CELL, TERRAIN_CELL)
+    gz = np.arange(track.z.min() - TERRAIN_MARGIN, track.z.max() + TERRAIN_MARGIN + TERRAIN_CELL, TERRAIN_CELL)
+    XX, ZZ = np.meshgrid(gx, gz)
+    tree = cKDTree(np.column_stack([track.x, track.z]))
+    dist, idx = tree.query(np.column_stack([XX.ravel(), ZZ.ravel()]), k=8)
+    near = elev[idx]
+    # Among the 8 nearest samples, ignore ones much further than the nearest (other branches).
+    mask = dist <= dist[:, :1] + 20.0
+    h = np.where(mask, near, np.inf).min(axis=1).reshape(XX.shape)
+    h = gaussian_filter(h, TERRAIN_SMOOTH, mode="nearest") - TERRAIN_DROP
+    return {"x0": float(gx[0]), "z0": float(gz[0]), "cell": TERRAIN_CELL, "nx": len(gx), "nz": len(gz),
+            "h": [round(float(v), 2) for v in h.ravel()]}
+
+
 def build(name: str) -> dict:
     tdir = ROOT / "data" / "tracks" / name
     meta = json.loads((tdir / "meta.json").read_text())
@@ -166,6 +241,13 @@ def build(name: str) -> dict:
     race_d = lateral_offsets(track, raceline)
     bank = banking_profile(track, meta)
     corners = detect_corners(track)
+    crossings = find_crossovers(track)
+    elev = elevation_profile(track, tdir)
+    if elev is None:
+        elev = np.zeros_like(track.s)
+    if meta.get("crossovers"):
+        elev = apply_crossovers(track, elev, meta, crossings)
+    terrain = terrain_grid(track, elev)
 
     official = meta["official_length_m"]
     err = (track.length - official) / official
@@ -187,12 +269,16 @@ def build(name: str) -> dict:
                 round(float(track.w_left[i]), 3),
                 round(float(track.w_right[i]), 3),
                 round(float(bank[i]), 5),
-                0.0,  # elevation: no DEM yet
+                round(float(elev[i]), 3),
                 round(float(np.clip(race_d[i], -track.w_right[i] + 0.5, track.w_left[i] - 0.5)), 3),
             ]
             for i in range(len(track.s))
         ],
         "corners": corners,
+        "crossovers": meta.get("crossovers", []),
+        "self_crossings": [[round(a, 1), round(b, 1)] for a, b in crossings],
+        "elevation_range_m": round(float(elev.max() - elev.min()), 1),
+        "terrain": terrain,
     }
     (tdir / "track.json").write_text(json.dumps(out, separators=(",", ":")))
     (tdir / "corners.json").write_text(json.dumps(corners, indent=2))
@@ -205,7 +291,8 @@ def main() -> None:
     args = ap.parse_args()
     out = build(args.track)
     print(f"{out['name']}: length {out['length_m']:.1f} m vs official {out['official_length_m']} m "
-          f"({out['length_error_pct']:+.2f}%), {len(out['points'])} samples")
+          f"({out['length_error_pct']:+.2f}%), {len(out['points'])} samples, elevation range {out['elevation_range_m']} m, "
+          f"self-crossings {out['self_crossings']}")
     print(f"{'#':>2} {'s_start':>8} {'s_apex':>8} {'s_end':>8} {'dir':>6} {'R min':>7}")
     for i, c in enumerate(out["corners"], 1):
         print(f"{i:>2} {c['s_start']:>8} {c['s_apex']:>8} {c['s_end']:>8} {c['direction']:>6} {c['min_radius_m']:>7}")

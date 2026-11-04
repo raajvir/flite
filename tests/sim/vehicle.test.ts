@@ -4,7 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { GRAVITY } from '../../src/sim/constants';
-import { COAST, FULL_BRAKE, FULL_THROTTLE, isFiniteState, kmh, params, run, runUntil, start } from './helpers';
+import { loadCarParams } from '../../src/sim/params';
+import { CAR, COAST, FULL_BRAKE, FULL_THROTTLE, isFiniteState, kmh, params, run, runUntil, start } from './helpers';
 
 describe.each(['sim', 'feel'] as const)('vehicle (%s set)', (set) => {
   const p = params(set);
@@ -120,9 +121,10 @@ describe.each(['sim', 'feel'] as const)('vehicle (%s set)', (set) => {
 });
 
 describe('assists (feel vs sim)', () => {
-  it('ABS (feel) keeps braking wheels from locking; sim can lock', () => {
+  it('ABS keeps braking wheels from locking; without ABS they can lock', () => {
     const lockSlip = (set: 'feel' | 'sim') => {
-      const p = params(set);
+      // "sim" here = the sim set with ABS switched off.
+      const p = set === 'feel' ? params('feel') : loadCarParams(CAR, 'sim', { absEnabled: 0 });
       const [fast] = runUntil(p, start(p), FULL_THROTTLE, (s) => kmh(s.u) >= 100, 10);
       let worst = 0;
       run(p, fast, FULL_BRAKE, 1, (s) => {
@@ -136,7 +138,7 @@ describe('assists (feel vs sim)', () => {
 
   it('traction control (feel) limits wheelspin at launch; sim spins up', () => {
     const spin = (set: 'feel' | 'sim') => {
-      const p = params(set);
+      const p = set === 'feel' ? params('feel') : loadCarParams(CAR, 'sim', { tcsEnabled: 0 });
       let worst = 0;
       run(p, start(p), FULL_THROTTLE, 1.5, (s) => {
         worst = Math.max(worst, s.wheels[2].kappa, s.wheels[3].kappa);

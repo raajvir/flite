@@ -17,6 +17,8 @@ export interface GroundQuery {
   /** Extra gradient from a kerb profile under this point (tilts this wheel's contact only) */
   kerbGradX: number;
   kerbGradZ: number;
+  /** Vertical curvature of the road along the driving direction, 1/m (> 0 = dip/compression, < 0 = crest) */
+  vertCurv: number;
   /** How far the point is past the wall (m, 0 = not touching) and the wall's outward normal (world XZ) */
   wallDepth: number;
   wallNx: number;
@@ -25,7 +27,8 @@ export interface GroundQuery {
 
 export interface World {
   readonly surfaces: SurfaceTable;
-  query(x: number, z: number): GroundQuery;
+  /** @param y height hint (the car's current height): picks the right level where the track crosses itself */
+  query(x: number, z: number, y?: number): GroundQuery;
 }
 
 export interface SurfacePatch {
@@ -57,6 +60,7 @@ export class FlatWorld implements World {
       gradZ: this.grad.z,
       kerbGradX: 0,
       kerbGradZ: 0,
+      vertCurv: 0,
       wallDepth: 0,
       wallNx: 0,
       wallNz: 0,

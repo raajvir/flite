@@ -7,7 +7,7 @@ export const DIFFICULTY = {
   minTopSkill: 0.76, // difficulty 0
   maxTopSkill: 1.0, // difficulty 1
   fieldSpread: 0.06, // gap between the best and worst AI
-  default: 0.7,
+  default: 1.0,
 };
 
 export function skillsFor(difficulty: number, count: number): number[] {

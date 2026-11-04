@@ -45,9 +45,9 @@ describe('parameter sets', () => {
   it('feel inherits everything from sim and only overrides what it lists', () => {
     const sim = params('sim');
     const feel = params('feel');
-    expect(feel.mass).toBe(sim.mass);
-    expect(feel.tireMuY).toBeGreaterThan(sim.tireMuY);
-    expect(feel.stabilityAssist).toBeGreaterThan(0);
+    expect(feel.mass).toBe(sim.mass); // inherited
+    expect(feel.tireShapeC).toBeLessThan(sim.tireShapeC); // overridden: gentler tire peak
+    expect(feel.stabilityAssist).toBeGreaterThan(sim.stabilityAssist); // overridden: more yaw damping
   });
 });
 

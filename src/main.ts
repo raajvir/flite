@@ -13,10 +13,9 @@ import { createWorld, followSun } from './render/scene';
 import { buildTrackMesh } from './render/trackMesh';
 import { BrakingLine } from './render/brakingLine';
 import { buildScenery, type SceneryFile } from './render/scenery';
-import monzaScenery from '../data/tracks/monza/scenery.json';
 import { RacingPlan } from './ai/aiDriver';
 import { loadCarParams, type CarFile, type ParamSetName } from './sim/params';
-import { loadTrack, surfaceTable, type TrackName } from './sim/tracks';
+import { isCircuit, loadTrack, sceneryFor, surfaceTable, type TrackName } from './sim/tracks';
 import type { TrackWorld } from './sim/trackWorld';
 import type { CarState } from './sim/types';
 import { TuningPanel } from './ui/tuningPanel';
@@ -30,7 +29,8 @@ const SLIPSTREAM_HUD_MIN_SPEED = 20;
 /** Z jumps back this far. */
 const REWIND_SECONDS = 5;
 const query = new URLSearchParams(location.search);
-const trackName: TrackName = query.get('track') === 'test' ? 'test' : 'monza';
+const trackParam = query.get('track');
+const trackName: TrackName = trackParam === 'test' ? 'test' : isCircuit(trackParam) ? trackParam : 'monza';
 const aiCount = Math.max(0, Math.min(15, Number(query.get('ai') ?? 7)));
 const laps = Math.max(1, Number(query.get('laps') ?? 3));
 let paramSet: ParamSetName = query.get('set') === 'sim' ? 'sim' : 'feel';
@@ -73,7 +73,7 @@ if (query.has('tuning')) panel.toggle();
 const world = createWorld(document.body, trackName === 'test');
 const track: TrackWorld | null = trackName === 'test' ? null : loadTrack(trackName);
 if (track) world.scene.add(buildTrackMesh(track));
-const scenery = track ? buildScenery(track, monzaScenery as unknown as SceneryFile) : null;
+const scenery = track && trackName !== 'test' ? buildScenery(track, sceneryFor(trackName) as SceneryFile) : null;
 if (scenery) world.scene.add(scenery.group);
 
 // Braking line: the AI's speed plan, built for the player's own car.
@@ -203,18 +203,20 @@ function drawMirror(): void {
   r.autoClear = true;
 }
 
-// --- Fixed spot camera for screenshots: ?spot=930 (optionally ?spot=930,right).
+// --- Fixed spot camera for screenshots: ?spot=<s>[,left|right[,distance[,height]]], e.g. ?spot=930,right,60,25
 const spotCam = (() => {
   const v = query.get('spot');
   if (!v || !track) return null;
-  const [sv, side] = v.split(',');
+  const [sv, side, distV, heightV] = v.split(',');
   const sNum = Number(sv);
   const sign = side === 'right' ? -1 : 1;
+  const dist = Number(distV ?? 30) || 30;
   const target = track.point(sNum, 0);
-  const eye = track.point(sNum - 30, sign * 18);
+  const eye = track.point(sNum - dist, sign * dist * 0.6);
   const cam = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.3, 2500);
-  cam.position.set(eye.x, 9, eye.z);
-  cam.lookAt(target.x, 0, target.z);
+  const ground = track.heightAt(sNum, 0).h;
+  cam.position.set(eye.x, ground + (Number(heightV ?? 9) || 9), eye.z);
+  cam.lookAt(target.x, ground, target.z);
   return { cam, target };
 })();
 

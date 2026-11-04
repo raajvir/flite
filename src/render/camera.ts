@@ -63,9 +63,9 @@ export class CarCamera {
     }
     const bx = car.x + Math.sin(this.camYaw) * c.distance;
     const bz = car.z + Math.cos(this.camYaw) * c.distance;
-    const target = new THREE.Vector3(bx, car.y + c.height, bz);
-    if (this.pos.lengthSq() === 0) this.pos.copy(target);
-    else this.pos.lerp(target, damp(c.positionRate, dt));
+    // Fixed distance behind the car (no positional lag, so the camera doesn't fall back under
+    // acceleration); only the swing round corners (camYaw) and the height are smoothed.
+    this.pos.set(bx, this.pos.lengthSq() === 0 ? car.y + c.height : this.pos.y + (car.y + c.height - this.pos.y) * damp(c.positionRate, dt), bz);
     cam.position.copy(this.pos);
     cam.lookAt(
       car.x - Math.sin(car.yaw) * c.lookAhead,

@@ -36,8 +36,8 @@ export function newRaceCar(world: TrackWorld, x: number, z: number): RaceCar {
   };
 }
 
-export function updateRaceCar(rc: RaceCar, world: TrackWorld, x: number, z: number, t: number, laps: number): RaceCar {
-  const p = world.project(x, z);
+export function updateRaceCar(rc: RaceCar, world: TrackWorld, x: number, z: number, t: number, laps: number, y?: number): RaceCar {
+  const p = world.project(x, z, y);
   const L = world.length;
   let ds = p.s - rc.s;
   if (ds < -L / 2) ds += L;

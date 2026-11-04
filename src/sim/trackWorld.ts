@@ -24,6 +24,8 @@ export interface TrackData {
   columns: string[];
   points: number[][];
   corners?: { s_start: number; s_end: number; s_apex: number; direction: string; min_radius_m: number }[];
+  crossovers?: { s_over?: number; s_under?: number; clearance_m: number }[];
+  terrain?: { x0: number; z0: number; cell: number; nx: number; nz: number; h: number[] };
 }
 
 export interface SurfaceBand {
@@ -59,6 +61,9 @@ const GRID_REACH = 70;
 const BAND_BIN = 10;
 /** Wall offsets are smoothed with a rolling max over +-this many metres, then ramped. */
 const WALL_SMOOTH = 30;
+/** With a height hint, 1 m of height difference counts like this many metres of distance
+ * when choosing the nearest piece of track (so a bridge and the road under it don't mix up). */
+const VERT_WEIGHT = 3;
 
 export interface Projection {
   s: number;
@@ -80,6 +85,9 @@ export class TrackWorld implements World {
   readonly elev: Float64Array;
   readonly raceD: Float64Array;
   readonly s: Float64Array;
+  /** Elevation slope (dz/ds) and curvature (d2z/ds2) along the track */
+  readonly elevD1: Float64Array;
+  readonly elevD2: Float64Array;
   /** Wall offset from the edge at each sample, per side */
   readonly wallL: Float64Array;
   readonly wallR: Float64Array;
@@ -111,6 +119,14 @@ export class TrackWorld implements World {
     this.elev = col('elev');
     this.raceD = col('race_d');
     this.s = Float64Array.from({ length: this.n }, (_, i) => (i * this.length) / this.n);
+    const ds = this.length / this.n;
+    this.elevD1 = new Float64Array(this.n);
+    this.elevD2 = new Float64Array(this.n);
+    for (let i = 0; i < this.n; i++) {
+      const prev = this.elev[(i - 1 + this.n) % this.n]!, next = this.elev[(i + 1) % this.n]!;
+      this.elevD1[i] = (next - prev) / (2 * ds);
+      this.elevD2[i] = (next - 2 * this.elev[i]! + prev) / (ds * ds);
+    }
 
     this.bands = layout.bands.map((b) => {
       const surf = surfaces.byName[b.surface];
@@ -240,8 +256,11 @@ export class TrackWorld implements World {
     return { x: cx - Math.cos(h) * d, z: cz + Math.sin(h) * d };
   }
 
-  /** Nearest point on the centreline. */
-  project(x: number, z: number): Projection {
+  /**
+   * Nearest point on the centreline. With a height hint y, height difference also counts,
+   * so where the track crosses itself the level the car is on wins.
+   */
+  project(x: number, z: number, y?: number): Projection {
     const cand = this.grid.get(this.cellZ(z) * this.gridW + this.cellX(x));
     let best = Infinity, bi = 0, bt = 0;
     const consider = (i: number) => {
@@ -252,7 +271,11 @@ export class TrackWorld implements World {
       let t = ((x - ax) * ex + (z - az) * ez) / len2;
       t = t < 0 ? 0 : t > 1 ? 1 : t;
       const px = ax + ex * t - x, pz = az + ez * t - z;
-      const d2 = px * px + pz * pz;
+      let d2 = px * px + pz * pz;
+      if (y !== undefined) {
+        const dh = (this.elev[i]! + (this.elev[j]! - this.elev[i]!) * t - y) * VERT_WEIGHT;
+        d2 += dh * dh;
+      }
       if (d2 < best) {
         best = d2;
         bi = i;
@@ -331,12 +354,24 @@ export class TrackWorld implements World {
     return this.at(left ? this.wallL : this.wallR, s);
   }
 
-  query(x: number, z: number): GroundQuery {
-    const p = this.project(x, z);
+  /** Terrain height around the track (bilinear on the built grid; 0 if none). */
+  terrainAt(x: number, z: number): number {
+    const t = this.track.terrain;
+    if (!t) return 0;
+    const fx = Math.max(0, Math.min(t.nx - 1.001, (x - t.x0) / t.cell));
+    const fz = Math.max(0, Math.min(t.nz - 1.001, (z - t.z0) / t.cell));
+    const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j;
+    const h = (a: number, b: number) => t.h[b * t.nx + a]!;
+    return (h(i, j) * (1 - u) + h(i + 1, j) * u) * (1 - v) + (h(i, j + 1) * (1 - u) + h(i + 1, j + 1) * u) * v;
+  }
+
+  query(x: number, z: number, y?: number): GroundQuery {
+    const p = this.project(x, z, y);
     const h = this.heightAt(p.s, p.d);
     const head = this.headingAt(p.s);
-    // Left normal (world) = (-cos h, sin h)
+    // Left normal (world) = (-cos h, sin h); forward (world) = (-sin h, -cos h)
     const nx = -Math.cos(head), nz = Math.sin(head);
+    const slope = this.at(this.elevD1, p.s);
     const left = p.d >= 0;
     const off = Math.abs(p.d) - this.at(left ? this.wl : this.wr, p.s);
     const wallDepth = Math.max(0, off - this.wallAt(p.s, left));
@@ -346,8 +381,9 @@ export class TrackWorld implements World {
       surface: info.surface,
       height: h.h + info.kerb,
       kerb: info.kerb,
-      gradX: h.dhdd * nx,
-      gradZ: h.dhdd * nz,
+      gradX: h.dhdd * nx - slope * Math.sin(head),
+      gradZ: h.dhdd * nz - slope * Math.cos(head),
+      vertCurv: this.at(this.elevD2, p.s),
       kerbGradX: info.kerbDhdd * nx,
       kerbGradZ: info.kerbDhdd * nz,
       wallDepth,

@@ -27,6 +27,11 @@ import { FlatWorld, type GroundQuery, type World } from './world';
 export const FLAT_ASPHALT: World = new FlatWorld(loadSurfaces(surfacesFile as unknown as SurfacesFile));
 
 const TWO_PI = Math.PI * 2;
+/** Yaw rate above which the car counts as already doing a donut, rad/s. */
+const DONUT_YAW_RATE = 1.0;
+/** Over a crest the car can go light down to this share of its load; a compression adds at most this. */
+const CREST_MIN_LOAD = 0.05;
+const COMPRESSION_MAX_LOAD = 2.5;
 /** Cap on how fast a wheel can be pushed up/down by the ground, m/s (also stops a spike on the first step after a reset). */
 const MAX_WHEEL_RISE_RATE = 5;
 /** Below this sliding speed along a wall, friction is scaled down linearly (avoids jitter), m/s. */
@@ -138,8 +143,13 @@ export function step(
   // Donut mode: full lock + full throttle at low speed = "I mean it", so the assists back off.
   // Above assistReleaseSpeed they fade back in (fully on at 2x), so normal driving stays planted
   // even though a held keyboard key always means full lock.
-  const lockFraction = Math.min(1, Math.abs(steerAngle) / Math.max(steerLock(p, Math.abs(s.u)), 1e-6));
-  const slowEnough = clamp(2 - Math.abs(s.u) / p.assistReleaseSpeed, 0, 1);
+  // Judged from the driver's steering INPUT (intent), not the wheels, which take a moment to reach lock.
+  const lockFraction = Math.abs(steerIn);
+  // Once the car is already rotating the way you steer (a donut in progress), allow twice the speed
+  // before the assists come back, so tight traction control doesn't snuff out the donut.
+  const rotatingIntoSteer = s.yawRate * steerIn > 0 && Math.abs(s.yawRate) > DONUT_YAW_RATE;
+  const releaseSpeed = p.assistReleaseSpeed * (rotatingIntoSteer ? 2 : 1);
+  const slowEnough = clamp(2 - Math.abs(s.u) / releaseSpeed, 0, 1);
   const donutIntent = lockFraction * lockFraction * throttleIn * slowEnough;
   const assistScale = 1 - p.assistLockRelease * donutIntent;
   if (p.tcsEnabled > 0 && crank > 0 && assistScale > 0) {
@@ -159,9 +169,13 @@ export function step(
     yi: (isLeft(i) ? 0.5 : -0.5) * (isFront(i) ? p.trackFront : p.trackRear),
   }));
   const ground: GroundQuery[] = geom.map(({ xi, yi }) =>
-    world.query(s.x + xi * fwdX + yi * leftX, s.z + xi * fwdZ + yi * leftZ),
+    world.query(s.x + xi * fwdX + yi * leftX, s.z + xi * fwdZ + yi * leftZ, s.y),
   );
   const loads = wheelLoads(p, s.u, s.axFiltered, s.ayFiltered, ext.liftScale ?? 1);
+  // Driving over a dip presses the car into the road (more load, more grip); over a crest it goes light.
+  const vertCurv = (ground[0]!.vertCurv + ground[1]!.vertCurv + ground[2]!.vertCurv + ground[3]!.vertCurv) / 4;
+  const crestFactor = clamp(1 + (s.u * s.u * vertCurv) / GRAVITY, CREST_MIN_LOAD, COMPRESSION_MAX_LOAD);
+  for (let i = 0; i < 4; i++) loads[i] = loads[i]! * crestFactor;
   // Wheel height above the road: kerb profile + surface roughness.
   const bumps = ground.map((g, i) => {
     const { xi, yi } = geom[i]!;

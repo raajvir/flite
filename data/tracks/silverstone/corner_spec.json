@@ -1,0 +1,129 @@
+{
+ "pitlane": {
+  "s_start": 5750,
+  "s_end": 300,
+  "side": "right"
+ },
+ "corners": [
+  {
+   "id": 1,
+   "name": "Abbey",
+   "outside": "runoff",
+   "outside_width": 30
+  },
+  {
+   "id": 2,
+   "name": "Farm",
+   "outside": "runoff",
+   "outside_width": 20
+  },
+  {
+   "id": 3,
+   "name": "Village",
+   "outside": "runoff",
+   "outside_width": 30,
+   "escape": true
+  },
+  {
+   "id": 4,
+   "name": "The Loop",
+   "outside": "runoff",
+   "outside_width": 30,
+   "sausage": true
+  },
+  {
+   "id": 5,
+   "name": "Aintree kink",
+   "outside": "grass",
+   "outside_width": 25,
+   "skip": true
+  },
+  {
+   "id": 6,
+   "name": "Aintree",
+   "outside": "runoff",
+   "outside_width": 25
+  },
+  {
+   "id": 7,
+   "name": "Brooklands",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 8,
+   "name": "Luffield",
+   "outside": "runoff",
+   "outside_width": 30
+  },
+  {
+   "id": 9,
+   "name": "Woodcote",
+   "outside": "runoff",
+   "outside_width": 30
+  },
+  {
+   "id": 10,
+   "name": "Woodcote exit",
+   "outside": "runoff",
+   "outside_width": 20
+  },
+  {
+   "id": 11,
+   "name": "Copse",
+   "outside": "gravel",
+   "outside_width": 35
+  },
+  {
+   "id": 12,
+   "name": "Maggotts",
+   "outside": "gravel",
+   "outside_width": 25
+  },
+  {
+   "id": 13,
+   "name": "Becketts",
+   "outside": "gravel",
+   "outside_width": 30
+  },
+  {
+   "id": 14,
+   "name": "Becketts 2",
+   "outside": "gravel",
+   "outside_width": 25
+  },
+  {
+   "id": 15,
+   "name": "Chapel",
+   "outside": "gravel",
+   "outside_width": 25
+  },
+  {
+   "id": 16,
+   "name": "Chapel exit",
+   "outside": "runoff",
+   "outside_width": 20
+  },
+  {
+   "id": 17,
+   "name": "Stowe",
+   "outside": "gravel",
+   "outside_width": 35
+  },
+  {
+   "id": 18,
+   "name": "Vale",
+   "outside": "runoff",
+   "outside_width": 30,
+   "sausage": true,
+   "escape": true
+  },
+  {
+   "id": 19,
+   "name": "Club",
+   "outside": "runoff",
+   "outside_width": 30
+  }
+ ],
+ "note": "Per-corner surface spec (APPROXIMATE, from general knowledge). ids = corner numbers printed by tools/track_builder.py. Run tools/author_surfaces.py to regenerate surfaces.json."
+}
