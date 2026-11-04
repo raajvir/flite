@@ -15,11 +15,13 @@ import { BrakingLine } from './render/brakingLine';
 import { buildScenery, type SceneryFile } from './render/scenery';
 import { RacingPlan } from './ai/aiDriver';
 import { loadCarParams, type CarFile, type ParamSetName } from './sim/params';
-import { isCircuit, loadTrack, sceneryFor, surfaceTable, type TrackName } from './sim/tracks';
+import { CIRCUITS, isCircuit, loadTrack, sceneryFor, surfaceTable, TRACKS, type TrackName } from './sim/tracks';
 import type { TrackWorld } from './sim/trackWorld';
 import type { CarState } from './sim/types';
 import { TuningPanel } from './ui/tuningPanel';
 import { Dash, type DashRace } from './ui/dash';
+import { PauseMenu, showStartMenu } from './ui/menu';
+import { RaceUi } from './ui/raceUi';
 import type { RaceSnapshot } from './game/session';
 import type { FromWorker, ToWorker } from './worker/protocol';
 
@@ -29,6 +31,8 @@ const SLIPSTREAM_HUD_MIN_SPEED = 20;
 /** Z jumps back this far. */
 const REWIND_SECONDS = 5;
 const query = new URLSearchParams(location.search);
+/** Without ?go the start menu is shown (the scene behind it is just a backdrop). */
+const menuMode = !query.has('go');
 const trackParam = query.get('track');
 const trackName: TrackName = trackParam === 'test' ? 'test' : isCircuit(trackParam) ? trackParam : 'monza';
 const aiCount = Math.max(0, Math.min(15, Number(query.get('ai') ?? 7)));
@@ -220,6 +224,55 @@ const spotCam = (() => {
   return { cam, target };
 })();
 
+// --- Race UI (timing tower, lap box, mini-map, banners), pause menu, start menu.
+const raceUi = new RaceUi(track, LIVERIES.map((l) => l.body), () => playerIndex);
+const pauseMenu = new PauseMenu({
+  resume: () => setPaused(false),
+  rewind: () => rewind(),
+  restart: () => {
+    restart();
+    setPaused(false);
+  },
+  settings: () => panel.toggle(),
+  mainMenu: () => {
+    const q = new URLSearchParams(location.search);
+    q.delete('go');
+    location.search = q.toString();
+  },
+});
+function setPaused(p: boolean): void {
+  paused = p;
+  send({ type: 'pause', paused });
+  sound.setPaused(paused);
+  pauseMenu.visible = paused;
+}
+function rewind(): void {
+  send({ type: 'rewind', seconds: REWIND_SECONDS });
+  views.forEach((v) => v.interp.clear());
+}
+function restart(): void {
+  send({ type: 'restart' });
+  views.forEach((v) => v.interp.clear());
+}
+const help = document.getElementById('help') as HTMLElement;
+help.style.display = 'none'; // controls are listed in the pause menu
+hud.style.display = 'none'; // F shows the debug readout (fps, sim rate)
+if (menuMode) {
+  for (const id of ['tower', 'lapbox', 'minimap', 'dash']) {
+    const e = document.getElementById(id);
+    if (e) e.style.display = 'none';
+  }
+  showStartMenu(
+    CIRCUITS.map((id) => ({ id, name: TRACKS[id].name, world: () => loadTrack(id) })),
+    { track: trackName, laps, ai: aiCount, difficulty: panel.race.aiDifficulty, set: paramSet },
+    (c) => {
+      panel.setAiDifficulty(c.difficulty);
+      const q = new URLSearchParams({ track: c.track, laps: String(c.laps), ai: String(c.ai), set: c.set, go: '1' });
+      location.search = q.toString();
+    },
+  );
+}
+
 // --- Worker.
 const worker = new Worker(new URL('./worker/simWorker.ts', import.meta.url), { type: 'module' });
 const send = (m: ToWorker) => worker.postMessage(m);
@@ -241,7 +294,7 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
     downloadText(`telemetry-${paramSet}-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`, m.csv);
   }
 };
-send({
+if (!menuMode) send({
   type: 'start',
   options: {
     track: trackName,
@@ -261,22 +314,12 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'KeyM') sound.toggleMute();
   if (e.code === 'KeyO') panel.toggle();
-  if (e.code === 'Escape') {
-    paused = !paused;
-    send({ type: 'pause', paused });
-    sound.setPaused(paused);
-    center.textContent = paused ? 'PAUSED' : '';
-    center.dataset.sub = paused ? 'Esc resume · Z rewind 5 s' : '';
-  }
-  if (e.code === 'KeyZ') {
-    send({ type: 'rewind', seconds: REWIND_SECONDS });
-    views.forEach((v) => v.interp.clear());
-  }
+  if (menuMode) return;
+  if (e.code === 'Escape') setPaused(!paused);
+  if (e.code === 'KeyZ') rewind();
+  if (e.code === 'KeyF') hud.style.display = hud.style.display === 'none' ? '' : 'none';
   if (e.code === 'KeyR') send({ type: 'reset' });
-  if (e.code === 'Backspace') {
-    send({ type: 'restart' });
-    views.forEach((v) => v.interp.clear());
-  }
+  if (e.code === 'Backspace') restart();
   if (e.code === 'KeyC') cam.toggle();
   if (e.code === 'KeyV') debugView = !debugView;
   if (e.code === 'KeyB') mirrorOn = !mirrorOn;
@@ -363,6 +406,20 @@ function frame(now: number): void {
     const c = race.countdown;
     scenery.setStartLights(c > 0 ? Math.min(5, Math.floor((race.t / race.countdown) * 5) + 1) : 0);
   }
+  // Start menu: slow orbit around the start line as a backdrop.
+  if (menuMode) {
+    mirrorFrame.style.display = 'none';
+    const target = track ? track.point(0, 0) : { x: 0, z: 0 };
+    const ty = track ? track.heightAt(0, 0).h : 0;
+    const a = now / 9000;
+    cam.camera.position.set(target.x + Math.cos(a) * 45, ty + 14, target.z + Math.sin(a) * 45);
+    cam.camera.lookAt(target.x, ty + 1, target.z);
+    world.renderer.shadowMap.needsUpdate = true;
+    followSun(world.sun, target.x, target.z);
+    world.renderer.render(world.scene, cam.camera);
+    requestAnimationFrame(frame);
+    return;
+  }
   // ?spot=<s>[,<side>]: a fixed camera looking at track distance s (for corner screenshots).
   if (spotCam) {
     mirrorFrame.style.display = 'none';
@@ -407,9 +464,10 @@ function frame(now: number): void {
         finished: me.finished,
       };
       const c = race.countdown;
-      if (!paused) center.textContent = c > 0 ? String(Math.ceil(c)) : race.t < race.countdown + 1 ? 'GO!' : '';
+      center.textContent = c > 0 ? String(Math.ceil(c)) : race.t < race.countdown + 1 ? 'GO!' : '';
     }
     dash.update(ps, params, surfaces, dashRace);
+    raceUi.update(race, views.map((v) => v.interp.latest()), now / 1000);
     // Top-left: debug info only (the dashboard at the bottom has the driving info).
     hud.textContent =
       `fps ${fps.toFixed(0)}  worst ${worstShown.toFixed(1)} ms  sim ${simRate.toFixed(0)} Hz\n` +

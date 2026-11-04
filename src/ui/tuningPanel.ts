@@ -213,6 +213,11 @@ export class TuningPanel {
     return { ...this.stored.race };
   }
 
+  setAiDifficulty(v: number): void {
+    this.stored.race.aiDifficulty = Math.max(0, Math.min(1, v));
+    this.save();
+  }
+
   setBrakingLine(on: boolean): void {
     this.stored.race.brakingLine = on;
     this.save();

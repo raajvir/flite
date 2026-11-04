@@ -173,3 +173,15 @@ describe('rewind', () => {
     expect(sess.cars.map((c) => c.state)).toEqual(first);
   }, 60_000);
 });
+
+describe('timing gaps', () => {
+  it('leader has no gap, cars behind have a positive gap in seconds', () => {
+    const sess = new Session(world, [{ params: feel, ai: { skill: 0.95 } }, { params: feel, ai: { skill: 0.8 } }], 3, 0);
+    for (let i = 0; i < 40_000; i++) sess.step(NONE);
+    const snap = sess.snapshot();
+    const [lead, second] = snap.order;
+    expect(snap.cars[lead!]!.gap).toBe(0);
+    expect(snap.cars[second!]!.gap).toBeGreaterThan(0.05);
+    expect(snap.cars[second!]!.gap).toBeLessThan(20);
+  }, 60_000);
+});

@@ -10,7 +10,7 @@ import type { CarState } from '../sim/types';
 const RPM_SEGMENTS = 16;
 
 const CSS = `
-#dash { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 14px;
+#dash { position: fixed; right: 14px; bottom: 14px; display: flex; gap: 14px;
   align-items: stretch; padding: 10px 16px; border-radius: 12px; background: rgba(14, 18, 24, 0.72);
   color: #eef3f8; font: 13px/1.3 ui-sans-serif, system-ui, sans-serif; pointer-events: none;
   box-shadow: 0 6px 24px rgba(0,0,0,0.3); white-space: nowrap; }
@@ -119,7 +119,7 @@ export class Dash {
     }
     grip.append(el('div', 'label', 'grip'), tires, this.surf);
 
-    this.root.append(left, center, right, grip);
+    this.root.append(center, right, grip); // position/laps live in the timing tower and lap box
     document.body.appendChild(this.root);
   }
 

@@ -16,6 +16,7 @@ import type { TrackWorld } from '../sim/trackWorld';
 import { initialState, NEUTRAL_INPUTS, type CarState, type DriverInputs } from '../sim/types';
 
 const AI_EVERY = 10; // AI thinks at 100 Hz
+const CHECKPOINT = 50; // m between timing checkpoints (for gaps)
 const RACE_EVERY = 10; // laps/positions at 100 Hz
 const GRID_ROW_SPACING = 8; // m between grid slots
 const GRID_STAGGER = 3; // m left/right of the centreline
@@ -43,6 +44,7 @@ export interface SessionCar {
 export interface SessionSnapshot {
   t: number;
   steps: number;
+  timing: { first: Map<number, number>; carCp: number[]; carCpTime: number[] };
   cars: { state: CarState; race: RaceCar; inputs: DriverInputs; aiState: AIState | null }[];
 }
 
@@ -51,7 +53,18 @@ export interface RaceSnapshot {
   countdown: number;
   laps: number;
   order: number[];
-  cars: { lap: number; lastLap: number | null; bestLap: number | null; lapTime: number; finished: boolean; draft: number }[];
+  cars: {
+    lap: number;
+    lastLap: number | null;
+    bestLap: number | null;
+    lapTime: number;
+    finished: boolean;
+    draft: number;
+    /** Time behind the leader at the latest common checkpoint, s (0 for the leader) */
+    gap: number;
+  }[];
+  /** Fastest lap of the race so far: car index and time */
+  fastest: { car: number; time: number } | null;
 }
 
 export class Session {
@@ -59,6 +72,10 @@ export class Session {
   private readonly plans = new Map<string, RacingPlan>();
   /** Latest slipstream effect per car (for the HUD). */
   drafts: DraftEffect[] = [];
+  /** Timing: first time any car reached each checkpoint, and each car's latest checkpoint + time. */
+  private firstAt = new Map<number, number>();
+  private carCp: number[] = [];
+  private carCpTime: number[] = [];
   private steps = 0;
   t = 0;
 
@@ -143,7 +160,18 @@ export class Session {
     this.steps++;
     this.t += dt;
     if (this.steps % RACE_EVERY === 0) {
-      for (const c of cars) c.race = updateRaceCar(c.race, this.world, c.state.x, c.state.z, this.t, this.laps, c.state.y);
+      cars.forEach((c, i) => {
+        c.race = updateRaceCar(c.race, this.world, c.state.x, c.state.z, this.t, this.laps, c.state.y);
+        const cp = Math.floor(c.race.progress / CHECKPOINT);
+        if (cp > (this.carCp[i] ?? -Infinity)) {
+          this.carCp[i] = cp;
+          this.carCpTime[i] = this.t;
+          if (!this.firstAt.has(cp)) this.firstAt.set(cp, this.t);
+        }
+      });
+      // Forget checkpoints everyone has passed long ago.
+      const oldest = Math.min(...this.carCp) - 4;
+      for (const k of this.firstAt.keys()) if (k < oldest) this.firstAt.delete(k);
     }
   }
 
@@ -162,6 +190,7 @@ export class Session {
     return {
       t: this.t,
       steps: this.steps,
+      timing: { first: new Map(this.firstAt), carCp: [...this.carCp], carCpTime: [...this.carCpTime] },
       cars: this.cars.map((c) => ({ state: c.state, race: c.race, inputs: c.inputs, aiState: c.ai?.state ?? null })),
     };
   }
@@ -169,6 +198,9 @@ export class Session {
   restore(snap: SessionSnapshot): void {
     this.t = snap.t;
     this.steps = snap.steps;
+    this.firstAt = new Map(snap.timing.first);
+    this.carCp = [...snap.timing.carCp];
+    this.carCpTime = [...snap.timing.carCpTime];
     snap.cars.forEach((sc, i) => {
       const c = this.cars[i]!;
       c.state = sc.state;
@@ -183,6 +215,12 @@ export class Session {
   }
 
   snapshot(): RaceSnapshot {
+    let fastest: RaceSnapshot['fastest'] = null;
+    this.cars.forEach((c, i) => {
+      if (c.race.bestLap !== null && (fastest === null || c.race.bestLap < fastest.time)) fastest = { car: i, time: c.race.bestLap };
+    });
+    const finishes = this.cars.map((c) => c.race.finishTime).filter((t): t is number => t !== null);
+    const leaderFinish = finishes.length ? Math.min(...finishes) : null;
     return {
       t: this.t,
       countdown: Math.max(0, this.countdown - this.t),
@@ -195,7 +233,13 @@ export class Session {
         lapTime: c.race.lap >= 1 ? this.t - c.race.lapStart : 0,
         finished: c.race.finished,
         draft: this.drafts[i]?.strength ?? 0,
+        gap: c.race.finished && c.race.finishTime !== null && leaderFinish !== null
+          ? c.race.finishTime - leaderFinish
+          : this.carCp[i] !== undefined
+            ? Math.max(0, this.carCpTime[i]! - (this.firstAt.get(this.carCp[i]!) ?? this.carCpTime[i]!))
+            : 0,
       })),
+      fastest,
     };
   }
 }

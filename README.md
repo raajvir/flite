@@ -11,7 +11,9 @@ npm install        # first time only
 npm run dev        # then open http://localhost:5173
 ```
 
-By default you race 7 AI cars on the Italian circuit (3 laps, you start last).
+Opening the page shows the start menu: pick a circuit (Italian, Belgian, British, Japanese, or the
+test area), laps, number of opponents (0 = practice), AI difficulty and handling set, then Start.
+Esc opens the pause menu (resume, rewind, restart, settings, main menu, and the controls list).
 
 URL options:
 - `?track=test` — the flat cone test area instead of the circuit
@@ -50,6 +52,8 @@ tools/.venv/bin/python -m pytest tools/tests   # track builder tests
 python3 -m venv tools/.venv && tools/.venv/bin/pip install numpy scipy pandas matplotlib shapely pytest  # once
 tools/.venv/bin/python tools/track_builder.py monza   # raw CSV -> data/tracks/monza/track.json
 tools/.venv/bin/python tools/plot_surfaces.py monza   # -> data/tracks/monza/surface_map.png
+tools/.venv/bin/python tools/elevation.py spa         # georeference via OSM + public DEM -> raw/elevation.csv
+tools/.venv/bin/python tools/author_surfaces.py spa   # corner_spec.json -> surfaces.json
 ```
 
 Each track folder has `raw/` (source data + license), `meta.json` (name, official length, camber),
@@ -80,6 +84,8 @@ docs/demos/  screenshots from each milestone
 - [~] AI racers (pulled forward): racing-line AI, overtaking, contacts, grid, laps, positions,
       difficulty slider, drafting, braking-line assist
 - [~] Scenery: grandstands, pits, tower, bridges, start lights, trees (positions approximate)
+- [~] M7 more circuits: Belgian, British, Japanese (real elevation; surfaces generated, approximate)
+- [~] M5 game loop: start menu, pause menu, timing tower, lap box, mini-map, rewind (ghost replay not yet)
 - [ ] M5 game loop
 - [ ] M6 validation
 - [ ] M7 more circuits
