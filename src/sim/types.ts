@@ -84,6 +84,8 @@ export interface CarState {
   shiftTimer: number;
   /** Engine speed, rpm */
   rpm: number;
+  /** Donut mode latched on (1) or off (0): assists released for a deliberate donut */
+  donut: number;
   /** ERS battery energy, J */
   battery: number;
   /** ERS power being deployed right now, W (0 when not boosting) */
@@ -124,6 +126,7 @@ export function initialState(pose: Pose, idleRpm = 0, battery = 0): CarState {
     gear: 1,
     shiftTimer: 0,
     rpm: idleRpm,
+    donut: 0,
     battery,
     ersDeploy: 0,
     axFiltered: 0,

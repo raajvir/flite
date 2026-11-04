@@ -91,6 +91,7 @@ function lerpState(a: CarState, b: CarState, k: number): CarState {
     distance: l(a.distance, b.distance, k),
     rpm: l(a.rpm, b.rpm, k),
     battery: l(a.battery, b.battery, k),
+    donut: b.donut,
     ersDeploy: b.ersDeploy,
     axFiltered: l(a.axFiltered, b.axFiltered, k),
     ayFiltered: l(a.ayFiltered, b.ayFiltered, k),

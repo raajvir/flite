@@ -424,6 +424,7 @@ function frame(now: number): void {
   if (spotCam) {
     mirrorFrame.style.display = 'none';
     dash.hide();
+    for (const id of ['tower', 'lapbox', 'minimap']) document.getElementById(id)?.style.setProperty('display', 'none');
     world.renderer.shadowMap.needsUpdate = true;
     followSun(world.sun, spotCam.target.x, spotCam.target.z);
     world.renderer.render(world.scene, spotCam.cam);

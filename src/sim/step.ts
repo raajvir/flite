@@ -27,8 +27,8 @@ import { FlatWorld, type GroundQuery, type World } from './world';
 export const FLAT_ASPHALT: World = new FlatWorld(loadSurfaces(surfacesFile as unknown as SurfacesFile));
 
 const TWO_PI = Math.PI * 2;
-/** Yaw rate above which the car counts as already doing a donut, rad/s. */
-const DONUT_YAW_RATE = 1.0;
+/** Steering and throttle must be past this (0..1) to count as "full" for donut mode. */
+const DONUT_INPUT = 0.95;
 /** Over a crest the car can go light down to this share of its load; a compression adds at most this. */
 const CREST_MIN_LOAD = 0.05;
 const COMPRESSION_MAX_LOAD = 2.5;
@@ -140,17 +140,13 @@ export function step(
   // Traction control (assist): cut drive torque when a driven tire's COMBINED slip
   // (spin + sideways) passes tcsSlip, where 1.0 = at the tire's peak. Watching combined
   // slip means it also catches power oversteer, not just straight-line wheelspin.
-  // Donut mode: full lock + full throttle at low speed = "I mean it", so the assists back off.
-  // Above assistReleaseSpeed they fade back in (fully on at 2x), so normal driving stays planted
-  // even though a held keyboard key always means full lock.
-  // Judged from the driver's steering INPUT (intent), not the wheels, which take a moment to reach lock.
-  const lockFraction = Math.abs(steerIn);
-  // Once the car is already rotating the way you steer (a donut in progress), allow twice the speed
-  // before the assists come back, so tight traction control doesn't snuff out the donut.
-  const rotatingIntoSteer = s.yawRate * steerIn > 0 && Math.abs(s.yawRate) > DONUT_YAW_RATE;
-  const releaseSpeed = p.assistReleaseSpeed * (rotatingIntoSteer ? 2 : 1);
-  const slowEnough = clamp(2 - Math.abs(s.u) / releaseSpeed, 0, 1);
-  const donutIntent = lockFraction * lockFraction * throttleIn * slowEnough;
+  // Donut mode (a latch): it can only START from nearly stopped with full lock + full throttle,
+  // then holds while both stay held, up to donutMaxSpeed. Arriving at a hairpin at speed can
+  // never trigger it, however hard you steer and accelerate.
+  const fullInputs = Math.abs(steerIn) > DONUT_INPUT && throttleIn > DONUT_INPUT;
+  const speedNow = Math.hypot(s.u, s.v);
+  const donut = fullInputs && (s.donut > 0 ? speedNow < p.donutMaxSpeed : Math.abs(s.u) < p.assistReleaseSpeed) ? 1 : 0;
+  const donutIntent = donut;
   const assistScale = 1 - p.assistLockRelease * donutIntent;
   if (p.tcsEnabled > 0 && crank > 0 && assistScale > 0) {
     const slip = Math.max(normalisedSlip(wRL, tire), normalisedSlip(wRR, tire));
@@ -368,6 +364,7 @@ export function step(
     gear,
     shiftTimer: shift.shiftTimer,
     rpm,
+    donut,
     battery,
     ersDeploy,
     axFiltered: s.axFiltered + (ax - s.axFiltered) * lag,

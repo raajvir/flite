@@ -40,6 +40,7 @@ TERRAIN_CELL = 25.0  # m grid spacing of the surrounding terrain
 TERRAIN_MARGIN = 450.0  # m of terrain beyond the track's bounding box
 TERRAIN_SMOOTH = 2.0  # cells: Gaussian smoothing of the terrain grid
 TERRAIN_DROP = 0.3  # m: terrain sits this far below the road near the track (no flicker)
+TERRAIN_CLAMP_RADIUS = 90.0  # m: within this of the track, terrain stays below the lowest nearby road
 
 
 @dataclass
@@ -229,6 +230,16 @@ def terrain_grid(track: Track, elev: np.ndarray) -> dict:
     mask = dist <= dist[:, :1] + 20.0
     h = np.where(mask, near, np.inf).min(axis=1).reshape(XX.shape)
     h = gaussian_filter(h, TERRAIN_SMOOTH, mode="nearest") - TERRAIN_DROP
+    # Near the track the terrain must never rise above the road: smoothing pulls hollows
+    # (e.g. a dip like Eau Rouge) up above the road surface. Clamp every grid point close to
+    # the track to below the LOWEST road within TERRAIN_CLAMP_RADIUS.
+    pts = np.column_stack([XX.ravel(), ZZ.ravel()])
+    near = tree.query_ball_point(pts, r=TERRAIN_CLAMP_RADIUS)
+    flat = h.ravel()
+    for k, ids in enumerate(near):
+        if ids:
+            flat[k] = min(flat[k], float(elev[ids].min()) - TERRAIN_DROP)
+    h = flat.reshape(XX.shape)
     return {"x0": float(gx[0]), "z0": float(gz[0]), "cell": TERRAIN_CELL, "nx": len(gx), "nz": len(gz),
             "h": [round(float(v), 2) for v in h.ravel()]}
 

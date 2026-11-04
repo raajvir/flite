@@ -91,6 +91,7 @@ const NUMBER_KEYS = [
   'stabilityFadeSpeed',
   'assistLockRelease',
   'assistReleaseSpeed',
+  'donutMaxSpeed',
 ] as const;
 
 export type NumberKey = (typeof NUMBER_KEYS)[number];

@@ -183,6 +183,16 @@ describe('assists (feel vs sim)', () => {
     }
   });
 
+  it('feel set: full lock + full throttle in a slow hairpin (50 km/h) does not trigger donut mode', () => {
+    const p = params('feel');
+    const [s0] = runUntil(p, start(p), FULL_THROTTLE, (s) => kmh(s.u) >= 50, 10);
+    let worstBeta = 0;
+    run(p, s0, { steer: 1, throttle: 1, brake: 0 }, 2, (s) => {
+      worstBeta = Math.max(worstBeta, Math.abs(Math.atan2(s.v, Math.abs(s.u))));
+    });
+    expect(worstBeta).toBeLessThan(0.35); // ~20 deg: no spin, assists stayed on
+  });
+
   it('feel set recovers from a flick that spins the sim set', () => {
     const spinAngle = (set: 'feel' | 'sim') => {
       const p = params(set);

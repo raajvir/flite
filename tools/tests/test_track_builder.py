@@ -58,3 +58,23 @@ def test_banking_ramps():
     assert bank[0] == 0
     assert math.isclose(bank[100], math.radians(4))  # s = 200, middle of the band
     assert 0 < bank[60] < math.radians(4)  # s = 120, on the ramp
+
+
+def test_terrain_never_above_the_road_near_the_track():
+    """Smoothing must not lift the ground above the road (it did in Spa's dips)."""
+    import json as _json
+    from scipy.spatial import cKDTree as _Tree
+    for name in ["spa", "suzuka", "silverstone", "monza"]:
+        t = _json.loads((ROOT / "data" / "tracks" / name / "track.json").read_text())
+        c = t["columns"]
+        pts = np.array(t["points"])
+        x, z, e = pts[:, c.index("x")], pts[:, c.index("z")], pts[:, c.index("elev")]
+        g = t["terrain"]
+        gx = g["x0"] + np.arange(g["nx"]) * g["cell"]
+        gz = g["z0"] + np.arange(g["nz"]) * g["cell"]
+        XX, ZZ = np.meshgrid(gx, gz)
+        H = np.array(g["h"]).reshape(g["nz"], g["nx"])
+        tree = _Tree(np.column_stack([x, z]))
+        d, idx = tree.query(np.column_stack([XX.ravel(), ZZ.ravel()]))
+        close = d < 40
+        assert np.all(H.ravel()[close] <= e[idx][close] + 1e-6), name

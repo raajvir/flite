@@ -463,10 +463,16 @@
         "note": "owner-tuned default"
       },
       "assistReleaseSpeed": {
-        "value": 8,
+        "value": 4,
         "unit": "m/s",
         "source": "design",
-        "note": "donut mode only below this speed; assists fully back by 2x this"
+        "note": "donut mode can only START below this speed (~14 km/h), so you never trigger it mid-corner"
+      },
+      "donutMaxSpeed": {
+        "value": 12,
+        "unit": "m/s",
+        "source": "design",
+        "note": "once started, donut mode holds (full lock + full throttle) up to this speed (~43 km/h)"
       }
     },
     "feel": {
