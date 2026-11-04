@@ -37,6 +37,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "First curve: inside astroturf",
+   "s_start": 691.1,
+   "s_end": 744.9,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "First curve: exit kerb",
    "s_start": 718.0,
    "s_end": 757.0,
@@ -51,7 +60,7 @@
    "s_end": 762.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -73,6 +82,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Second curve: inside astroturf",
+   "s_start": 839.0,
+   "s_end": 933.0,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Second curve: exit kerb",
    "s_start": 886.0,
    "s_end": 949.0,
@@ -87,7 +105,7 @@
    "s_end": 954.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -109,6 +127,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Esses 1: inside astroturf",
+   "s_start": 1090.6,
+   "s_end": 1145.4,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Esses 1: exit kerb",
    "s_start": 1118.0,
    "s_end": 1171.0,
@@ -123,7 +150,7 @@
    "s_end": 1176.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -145,6 +172,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Esses 2: inside astroturf",
+   "s_start": 1196.9,
+   "s_end": 1255.1,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Esses 2: exit kerb",
    "s_start": 1226.0,
    "s_end": 1287.0,
@@ -159,7 +195,7 @@
    "s_end": 1292.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -181,6 +217,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Esses 3: inside astroturf",
+   "s_start": 1363.4,
+   "s_end": 1440.6,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Esses 3: exit kerb",
    "s_start": 1402.0,
    "s_end": 1471.0,
@@ -195,7 +240,7 @@
    "s_end": 1476.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -217,6 +262,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Esses 4: inside astroturf",
+   "s_start": 1562.0,
+   "s_end": 1658.0,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Esses 4: exit kerb",
    "s_start": 1610.0,
    "s_end": 1659.0,
@@ -231,7 +285,7 @@
    "s_end": 1664.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -253,6 +307,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Dunlop entry: inside astroturf",
+   "s_start": 1686.9,
+   "s_end": 1773.1,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Dunlop entry: exit kerb",
    "s_start": 1730.0,
    "s_end": 1859.0,
@@ -267,7 +330,7 @@
    "s_end": 1864.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -289,6 +352,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Dunlop: inside astroturf",
+   "s_start": 1884.4,
+   "s_end": 1923.6,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Dunlop: exit kerb",
    "s_start": 1904.0,
    "s_end": 1957.0,
@@ -303,7 +375,7 @@
    "s_end": 1962.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -325,6 +397,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Dunlop 2: inside astroturf",
+   "s_start": 1974.4,
+   "s_end": 2013.6,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Dunlop 2: exit kerb",
    "s_start": 1994.0,
    "s_end": 2043.0,
@@ -339,7 +420,7 @@
    "s_end": 2048.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -361,6 +442,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Dunlop exit: inside astroturf",
+   "s_start": 2065.6,
+   "s_end": 2110.4,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Dunlop exit: exit kerb",
    "s_start": 2088.0,
    "s_end": 2149.0,
@@ -375,7 +465,7 @@
    "s_end": 2154.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -397,6 +487,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Degner 1: inside astroturf",
+   "s_start": 2280.9,
+   "s_end": 2311.1,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Degner 1: exit kerb",
    "s_start": 2296.0,
    "s_end": 2341.0,
@@ -411,7 +510,7 @@
    "s_end": 2346.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -433,6 +532,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Degner 2: inside astroturf",
+   "s_start": 2436.6,
+   "s_end": 2471.4,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Degner 2: exit kerb",
    "s_start": 2454.0,
    "s_end": 2501.0,
@@ -447,7 +555,7 @@
    "s_end": 2506.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -478,6 +586,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Hairpin: inside astroturf",
+   "s_start": 2890.9,
+   "s_end": 2949.1,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Hairpin: exit kerb",
    "s_start": 2920.0,
    "s_end": 2993.0,
@@ -492,7 +609,7 @@
    "s_end": 2998.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -514,6 +631,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "200R: inside astroturf",
+   "s_start": 3168.9,
+   "s_end": 3255.1,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "200R: exit kerb",
    "s_start": 3212.0,
    "s_end": 3249.0,
@@ -528,7 +654,7 @@
    "s_end": 3254.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -550,6 +676,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Spoon: inside astroturf",
+   "s_start": 3904.0,
+   "s_end": 4000.0,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Spoon: exit kerb",
    "s_start": 3952.0,
    "s_end": 4101.0,
@@ -564,7 +699,7 @@
    "s_end": 4106.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -586,6 +721,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "130R: inside astroturf",
+   "s_start": 4945.6,
+   "s_end": 4990.4,
+   "side": "left",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "130R: exit kerb",
    "s_start": 4968.0,
    "s_end": 5035.0,
@@ -600,7 +744,7 @@
    "s_end": 5040.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -640,6 +784,15 @@
    "surface": "kerb_sausage"
   },
   {
+   "note": "Final chicane 1: inside astroturf",
+   "s_start": 5374.6,
+   "s_end": 5409.4,
+   "side": "right",
+   "offset": 1.9,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Final chicane 1: exit kerb",
    "s_start": 5392.0,
    "s_end": 5429.0,
@@ -654,7 +807,7 @@
    "s_end": 5434.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -685,6 +838,15 @@
    "surface": "kerb_sausage"
   },
   {
+   "note": "Final chicane 2: inside astroturf",
+   "s_start": 5427.8,
+   "s_end": 5460.2,
+   "side": "left",
+   "offset": 1.9,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Final chicane 2: exit kerb",
    "s_start": 5444.0,
    "s_end": 5491.0,
@@ -699,7 +861,7 @@
    "s_end": 5496.0,
    "side": "right",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -721,6 +883,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Last corner: inside astroturf",
+   "s_start": 5504.3,
+   "s_end": 5563.7,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Last corner: exit kerb",
    "s_start": 5534.0,
    "s_end": 5605.0,
@@ -735,7 +906,7 @@
    "s_end": 5610.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   },
   {
@@ -757,6 +928,15 @@
    "surface": "kerb_flat"
   },
   {
+   "note": "Last corner exit: inside astroturf",
+   "s_start": 5593.8,
+   "s_end": 5662.2,
+   "side": "right",
+   "offset": 1.3,
+   "width": 3.0,
+   "surface": "astroturf"
+  },
+  {
    "note": "Last corner exit: exit kerb",
    "s_start": 5628.0,
    "s_end": 5747.0,
@@ -771,7 +951,7 @@
    "s_end": 5752.0,
    "side": "left",
    "offset": 1.4,
-   "width": 2.5,
+   "width": 4.0,
    "surface": "astroturf"
   }
  ]

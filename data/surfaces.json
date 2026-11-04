@@ -90,13 +90,13 @@
       }
     },
     "grass": {
-      "grip": 0.45,
-      "rollingResistance": 0.03,
+      "grip": 0.55,
+      "rollingResistance": 0.025,
       "bump": {
         "amplitude": 0.015,
         "wavelength": 3.0
       },
-      "drag": 0.04,
+      "drag": 0.03,
       "color": "#7cc46a",
       "sound": "rumble",
       "particles": "grass",

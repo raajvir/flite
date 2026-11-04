@@ -28,7 +28,8 @@ KERB_WIDTH_INSIDE = 1.3
 KERB_WIDTH_EXIT = 1.4
 SAUSAGE_OFFSET = 1.4
 SAUSAGE_WIDTH = 0.5
-TURF_WIDTH = 2.5
+TURF_WIDTH = 4.0
+INSIDE_TURF_WIDTH = 3.0  # dark-green run-off behind the inside kerb
 OUTSIDE_GAP_WITH_TURF = 4.0
 OUTSIDE_LEAD = 20.0  # m before the corner the outside zone starts
 OUTSIDE_TRAIL = 35.0  # m after the corner it ends
@@ -47,7 +48,7 @@ def bands_for(c: dict, spec: dict, length: float) -> list[dict]:
     w = lambda a, b: (round(a % length, 1), round(b % length, 1))  # noqa: E731
     name = spec.get("name", f"corner {spec['id']}")
     out: list[dict] = []
-    zone = spec.get("outside", "grass")
+    zone = spec.get("outside", "gravel")
     turf = spec.get("astroturf", True)
     if zone != "grass":
         a, b = w(s0 - OUTSIDE_LEAD, s1 + OUTSIDE_TRAIL)
@@ -64,6 +65,10 @@ def bands_for(c: dict, spec: dict, length: float) -> list[dict]:
         a, b = w(apex - 0.6 * half, apex + 0.6 * half)
         out.append({"note": f"{name}: sausage", "s_start": a, "s_end": b, "side": inside, "offset": SAUSAGE_OFFSET,
                     "width": SAUSAGE_WIDTH, "surface": "kerb_sausage"})
+    if turf:
+        a, b = w(apex - 0.8 * half, apex + 0.8 * half)
+        out.append({"note": f"{name}: inside astroturf", "s_start": a, "s_end": b, "side": inside,
+                    "offset": KERB_WIDTH_INSIDE + (SAUSAGE_WIDTH + 0.1 if spec.get("sausage") else 0), "width": INSIDE_TURF_WIDTH, "surface": "astroturf"})
     a, b = w(apex, s1 + 15)
     out.append({"note": f"{name}: exit kerb", "s_start": a, "s_end": b, "side": outside, "offset": 0,
                 "width": KERB_WIDTH_EXIT, "surface": "kerb_flat"})

@@ -21,7 +21,8 @@ export interface Livery {
 export const CAR_COLORS = {
   black: 0x1e2024,
   white: 0xf2f2f2,
-  tire: 0x55595f,
+  tire: 0x2a2d32,
+  rim: 0xc9ced6,
 };
 
 export const DEFAULT_LIVERY: Livery = { body: 0xd8352a, accent: 0xffd200 };
@@ -64,9 +65,13 @@ export interface CarModel {
   triangles: number;
 }
 
-const WHEEL_SEGMENTS = 10;
-const TIRE_WIDTH_FRONT = 0.3;
-const TIRE_WIDTH_REAR = 0.38;
+const WHEEL_SEGMENTS = 24; // round enough to read as a proper cylinder
+/** Rim radius as a share of the tire radius. */
+const RIM_RATIO = 0.62;
+/** How far the rim stands proud of the tire face (both sides together), m. */
+const RIM_PROUD = 0.01;
+const TIRE_WIDTH_FRONT = 0.29;
+const TIRE_WIDTH_REAR = 0.365; // + proud rims keeps the car within 2.0 m overall
 /** Body pitches/rolls about this height (roughly the axle line). */
 const BODY_PIVOT_Y = 0.3;
 const ARM_THICKNESS = 0.035;
@@ -158,65 +163,54 @@ export function createCarModel(geo: CarGeometryInput, livery: Livery = DEFAULT_L
   const R = geo.wheelRadius;
   const C = { ...CAR_COLORS, body: livery.body, accent: livery.accent };
 
-  // --- Main body: long sloping nose -> cockpit -> engine cover -> tail.
+  // --- Main body: nose -> cockpit -> tail (4 sections only).
   shell.add(
     loft(
       [
-        { z: zf - 0.8, halfWidth: 0.15, top: 0.2, bottom: 0.1 },
-        { z: zf, halfWidth: 0.2, top: 0.34, bottom: 0.1 },
-        { z: zf + 1.05, halfWidth: 0.32, top: 0.56, bottom: 0.06 },
+        { z: zf - 0.8, halfWidth: 0.15, top: 0.22, bottom: 0.1 },
+        { z: zf + 1.0, halfWidth: 0.3, top: 0.56, bottom: 0.06 },
         { z: zf + 1.95, halfWidth: 0.34, top: 0.6, bottom: 0.06 },
-        { z: zr - 0.25, halfWidth: 0.24, top: 0.48, bottom: 0.08 },
         { z: zr + 0.3, halfWidth: 0.14, top: 0.36, bottom: 0.1 },
       ],
       C.body,
     ),
   );
-  shell.add(box(0.14, 0.02, 1.2, C.accent, 0, 0.36, zf + 0.2)); // nose stripe
 
-  // --- Sidepods: boxy, with a black intake on the front face.
+  // --- Sidepods: one simple wedge each.
   for (const side of [-1, 1]) {
     const pod = loft(
       [
-        { z: zf + 1.25, halfWidth: 0.24, top: 0.5, bottom: 0.06 },
-        { z: zr - 0.85, halfWidth: 0.24, top: 0.48, bottom: 0.06 },
-        { z: zr - 0.15, halfWidth: 0.1, top: 0.32, bottom: 0.08 },
+        { z: zf + 1.25, halfWidth: 0.24, top: 0.48, bottom: 0.06 },
+        { z: zr - 0.15, halfWidth: 0.1, top: 0.3, bottom: 0.08 },
       ],
       C.body,
     );
     pod.position.x = side * 0.56;
     shell.add(pod);
-    shell.add(box(0.3, 0.3, 0.02, C.black, side * 0.56, 0.28, zf + 1.24));
   }
 
-  // --- Cockpit: black triangular opening, helmet, airbox in the accent colour.
+  // --- Cockpit opening, helmet, airbox (accent).
   shell.add(flatTriangle([[0, zf + 0.95], [0.27, zf + 1.95], [-0.27, zf + 1.95]], 0.605, C.black));
   const helmet = mesh(new THREE.IcosahedronGeometry(0.16, 0), C.white);
   helmet.position.set(0, 0.7, zf + 1.6);
   shell.add(helmet);
-  shell.add(box(0.22, 0.07, 0.04, C.black, 0, 0.7, zf + 1.45));
   shell.add(
     loft(
       [
-        { z: zf + 1.95, halfWidth: 0.17, top: 0.9, bottom: 0.58 },
-        { z: zf + 2.35, halfWidth: 0.15, top: 0.84, bottom: 0.58 },
-        { z: zf + 2.85, halfWidth: 0.1, top: 0.6, bottom: 0.5 },
+        { z: zf + 1.95, halfWidth: 0.16, top: 0.88, bottom: 0.58 },
+        { z: zf + 2.8, halfWidth: 0.1, top: 0.6, bottom: 0.5 },
       ],
       C.accent,
     ),
   );
-  shell.add(box(0.2, 0.14, 0.02, C.black, 0, 0.77, zf + 1.94));
 
-  // --- Front wing: flat plate (accent) with black endplates.
+  // --- Front wing and rear wing: accent plates with black endplates.
   const fwZ = zf - 0.55;
   shell.add(box(1.9, 0.04, 0.45, C.accent, 0, 0.1, fwZ));
-  for (const side of [-1, 1]) shell.add(box(0.04, 0.26, 0.5, C.black, side * 0.95, 0.17, fwZ));
-
-  // --- Rear wing: flat plate (accent) with tall black endplates, on a pylon.
+  for (const side of [-1, 1]) shell.add(box(0.04, 0.24, 0.5, C.black, side * 0.95, 0.16, fwZ));
   const rwZ = zr + 0.35;
   shell.add(box(1.0, 0.04, 0.4, C.accent, 0, 0.88, rwZ));
   for (const side of [-1, 1]) shell.add(box(0.04, 0.46, 0.5, C.black, side * 0.5, 0.74, rwZ));
-  shell.add(box(0.06, 0.46, 0.1, C.black, 0, 0.6, rwZ - 0.05));
 
   // --- Wheels (root level: they follow the ground and kerbs, not the body).
   const wheels: THREE.Object3D[] = [];
@@ -231,11 +225,17 @@ export function createCarModel(geo: CarGeometryInput, livery: Livery = DEFAULT_L
   spec.forEach(([x, z, width], i) => {
     const pivot = new THREE.Group();
     pivot.position.set(x, R, z);
+    // Wheel = round tire + a slightly proud silver rim on each face, with one spoke so you see it spin.
+    const wheel = new THREE.Group();
     const tire = mesh(new THREE.CylinderGeometry(R, R, width, WHEEL_SEGMENTS), C.tire);
     tire.geometry.rotateZ(Math.PI / 2); // axle along X
-    pivot.add(tire);
+    const rim = mesh(new THREE.CylinderGeometry(R * RIM_RATIO, R * RIM_RATIO, width + RIM_PROUD, WHEEL_SEGMENTS), C.rim);
+    rim.geometry.rotateZ(Math.PI / 2);
+    const spoke = box(width + RIM_PROUD + 0.002, R * RIM_RATIO * 1.7, 0.05, C.black, 0, 0, 0);
+    wheel.add(tire, rim, spoke);
+    pivot.add(wheel);
     root.add(pivot);
-    wheels.push(tire);
+    wheels.push(wheel);
     pivots.push(pivot);
     // Upper and lower wishbone arms: hub -> inner mount on the body (fore and aft mounts).
     for (const [dy, dz] of [[0.08, 0.18], [-0.1, -0.18]] as const) {

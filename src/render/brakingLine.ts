@@ -17,7 +17,7 @@ export const BRAKING_LINE = {
   step: 2, // m per segment
   width: 0.7, // m
   lift: 0.05, // m above the road
-  redFraction: 0.9, // red when the braking needed is above this share of the plan's braking
+  redFraction: 0.75, // red when the braking needed is above this share of the plan's braking (early warning)
   margin: 1.5, // m/s: within this of the plan counts as "on pace" (green)
   green: 0x2ecc40,
   yellow: 0xffd21f,

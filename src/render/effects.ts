@@ -36,6 +36,8 @@ export const EFFECTS_TUNING = {
 };
 
 interface Puff {
+  /** Size multiplier: small skids make small puffs */
+  scale: number;
   x: number;
   y: number;
   z: number;
@@ -110,7 +112,7 @@ export class TireEffects {
     );
     this.smoke.frustumCulled = false;
     for (let i = 0; i < this.t.smokePuffs; i++) {
-      this.puffs.push({ x: 0, y: 0, z: 0, vx: 0, vz: 0, age: 1, life: 0, rot: 0 });
+      this.puffs.push({ x: 0, y: 0, z: 0, vx: 0, vz: 0, age: 1, life: 0, rot: 0, scale: 1 });
       this.smoke.setMatrixAt(i, this.m4.makeScale(0, 0, 0));
       this.smoke.setColorAt(i, this.white);
     }
@@ -159,20 +161,26 @@ export class TireEffects {
 
       // Particles from the rear tires only: tire smoke when sliding, dust/grass on loose surfaces.
       let rate = 0;
+      let scale = 1;
       let color = this.white;
       if (i >= 2) {
         if (loose && speed > this.t.looseMinSpeed) {
-          rate = this.t.looseRate * Math.min(1, speed / this.t.looseFullSpeed);
+          // Off the tarmac: more and bigger clouds the faster you go.
+          const f = Math.min(1, speed / this.t.looseFullSpeed);
+          rate = this.t.looseRate * f;
+          scale = 0.35 + 0.9 * f;
           color = surf!.particles === 'dust' ? this.dust : this.grass;
         } else if (k > 0) {
-          rate = k * this.t.smokeRate;
+          // Tire smoke: a light skid gives a few small puffs, a big lock-up a thick cloud.
+          rate = k * k * this.t.smokeRate;
+          scale = 0.3 + 0.9 * k;
         }
       }
       if (rate > 0) {
         this.spawnAcc[i]! += rate * dt;
         while (this.spawnAcc[i]! >= 1) {
           this.spawnAcc[i]! -= 1;
-          this.spawn(wx, wz, vwx, vwz, color);
+          this.spawn(wx, wz, vwx, vwz, color, scale);
         }
       } else {
         this.spawnAcc[i] = 0;
@@ -202,7 +210,7 @@ export class TireEffects {
     this.markCount++;
   }
 
-  private spawn(x: number, z: number, vx: number, vz: number, color: THREE.Color): void {
+  private spawn(x: number, z: number, vx: number, vz: number, color: THREE.Color, scale = 1): void {
     const idx = this.puffNext;
     const puff = this.puffs[idx]!;
     this.smoke.setColorAt(idx, color);
@@ -217,6 +225,7 @@ export class TireEffects {
     puff.age = 0;
     puff.life = this.t.smokeLife * (0.75 + Math.random() * 0.5);
     puff.rot = Math.random() * Math.PI * 2;
+    puff.scale = scale;
   }
 
   private updateSmoke(dt: number): void {
@@ -236,7 +245,7 @@ export class TireEffects {
       puff.y += t.smokeRise * dt;
       const k = Math.min(1, puff.age / puff.life);
       // Grow, then shrink away at the end (stands in for fading out).
-      const size = (t.smokeStartSize + (t.smokeEndSize - t.smokeStartSize) * Math.sqrt(k)) * (1 - k * k * k);
+      const size = (t.smokeStartSize + (t.smokeEndSize - t.smokeStartSize) * Math.sqrt(k)) * (1 - k * k * k) * puff.scale;
       this.q.setFromAxisAngle(this.up, puff.rot);
       this.m4.compose(this.v3.set(puff.x, puff.y + size * 0.5, puff.z), this.q, this.s3.set(size, size * 0.8, size));
       this.smoke.setMatrixAt(i, this.m4);

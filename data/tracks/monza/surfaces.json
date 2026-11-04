@@ -1,63 +1,625 @@
 {
-  "description": "Surface layout for the Italian circuit as bands along the track. s = distance from the start line (m, driving direction), side = left/right of the driving direction, offset = metres beyond the track edge where the band starts (negative = on the road), width in metres. Later bands win where they overlap.",
-  "source": "APPROXIMATE: authored from general knowledge of the circuit using the corner positions found by tools/track_builder.py. Not yet checked against satellite imagery or OSM.",
-  "edgeLine": { "width": 0.2, "surface": "paint" },
-  "verge": "grass",
-  "wallGap": 4,
-  "wallMin": 14,
-  "bands": [
-    { "note": "Main straight: pit lane on the right", "s_start": 5560, "s_end": 650, "side": "right", "offset": 6, "width": 10, "surface": "pitlane" },
-
-    { "note": "T1-2 chicane: escape road straight ahead", "s_start": 860, "s_end": 1010, "side": "left", "offset": 0, "width": 35, "surface": "runoff" },
-    { "note": "T1 inside kerb", "s_start": 912, "s_end": 948, "side": "right", "offset": 0, "width": 1.5, "surface": "kerb_flat" },
-    { "note": "T1 sausage", "s_start": 918, "s_end": 942, "side": "right", "offset": 1.6, "width": 0.5, "surface": "kerb_sausage" },
-    { "note": "T1 exit kerb", "s_start": 940, "s_end": 962, "side": "left", "offset": 0, "width": 1.5, "surface": "kerb_flat" },
-    { "note": "T2 inside kerb", "s_start": 962, "s_end": 992, "side": "left", "offset": 0, "width": 1.5, "surface": "kerb_flat" },
-    { "note": "T2 sausage", "s_start": 966, "s_end": 988, "side": "left", "offset": 1.6, "width": 0.5, "surface": "kerb_sausage" },
-    { "note": "T2 run-off", "s_start": 960, "s_end": 1060, "side": "right", "offset": 4, "width": 25, "surface": "runoff" },
-    { "note": "T2 exit kerb", "s_start": 985, "s_end": 1030, "side": "right", "offset": 0, "width": 1.5, "surface": "kerb_flat" },
-    { "note": "T2 exit astroturf", "s_start": 990, "s_end": 1030, "side": "right", "offset": 1.5, "width": 2.5, "surface": "astroturf" },
-
-    { "note": "Curva Grande: outside gravel", "s_start": 1380, "s_end": 1700, "side": "left", "offset": 4, "width": 30, "surface": "gravel" },
-    { "note": "Curva Grande inside kerb", "s_start": 1400, "s_end": 1500, "side": "right", "offset": 0, "width": 1.2, "surface": "kerb_flat" },
-    { "note": "Curva Grande exit astroturf", "s_start": 1500, "s_end": 1680, "side": "left", "offset": 1.4, "width": 2.6, "surface": "astroturf" },
-    { "note": "Curva Grande exit kerb", "s_start": 1560, "s_end": 1670, "side": "left", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-
-    { "note": "Second chicane: escape straight ahead", "s_start": 2060, "s_end": 2170, "side": "right", "offset": 0, "width": 30, "surface": "runoff" },
-    { "note": "T4 inside kerb", "s_start": 2130, "s_end": 2160, "side": "left", "offset": 0, "width": 1.5, "surface": "kerb_flat" },
-    { "note": "T4 sausage", "s_start": 2134, "s_end": 2158, "side": "left", "offset": 1.6, "width": 0.5, "surface": "kerb_sausage" },
-    { "note": "T4 exit kerb", "s_start": 2155, "s_end": 2172, "side": "right", "offset": 0, "width": 1.5, "surface": "kerb_flat" },
-    { "note": "T5 inside kerb", "s_start": 2172, "s_end": 2200, "side": "right", "offset": 0, "width": 1.5, "surface": "kerb_flat" },
-    { "note": "T5 sausage", "s_start": 2176, "s_end": 2198, "side": "right", "offset": 1.6, "width": 0.5, "surface": "kerb_sausage" },
-    { "note": "T5 outside gravel", "s_start": 2190, "s_end": 2280, "side": "left", "offset": 4, "width": 25, "surface": "gravel" },
-    { "note": "T5 exit kerb", "s_start": 2195, "s_end": 2235, "side": "left", "offset": 0, "width": 1.5, "surface": "kerb_flat" },
-    { "note": "T5 exit astroturf", "s_start": 2200, "s_end": 2240, "side": "left", "offset": 1.5, "width": 2.5, "surface": "astroturf" },
-
-    { "note": "First Lesmo: outside gravel", "s_start": 2540, "s_end": 2700, "side": "left", "offset": 4, "width": 30, "surface": "gravel" },
-    { "note": "First Lesmo inside kerb", "s_start": 2570, "s_end": 2615, "side": "right", "offset": 0, "width": 1.3, "surface": "kerb_flat" },
-    { "note": "First Lesmo exit kerb", "s_start": 2600, "s_end": 2650, "side": "left", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "First Lesmo exit astroturf", "s_start": 2605, "s_end": 2660, "side": "left", "offset": 1.4, "width": 2.5, "surface": "astroturf" },
-
-    { "note": "Second Lesmo: outside gravel", "s_start": 2860, "s_end": 3000, "side": "left", "offset": 4, "width": 30, "surface": "gravel" },
-    { "note": "Second Lesmo inside kerb", "s_start": 2868, "s_end": 2900, "side": "right", "offset": 0, "width": 1.3, "surface": "kerb_flat" },
-    { "note": "Second Lesmo exit kerb", "s_start": 2895, "s_end": 2945, "side": "left", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "Second Lesmo exit astroturf", "s_start": 2900, "s_end": 2950, "side": "left", "offset": 1.4, "width": 2.5, "surface": "astroturf" },
-
-    { "note": "Third chicane T9: outside gravel", "s_start": 3900, "s_end": 4000, "side": "right", "offset": 3, "width": 30, "surface": "gravel" },
-    { "note": "T9 inside kerb", "s_start": 3940, "s_end": 3972, "side": "left", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "T9 exit kerb", "s_start": 3960, "s_end": 3990, "side": "right", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "T10 outside gravel", "s_start": 4000, "s_end": 4130, "side": "left", "offset": 3, "width": 25, "surface": "gravel" },
-    { "note": "T10 inside kerb", "s_start": 4040, "s_end": 4100, "side": "right", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "T10 exit kerb", "s_start": 4090, "s_end": 4125, "side": "left", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "T11 outside gravel", "s_start": 4140, "s_end": 4230, "side": "right", "offset": 4.4, "width": 25, "surface": "gravel" },
-    { "note": "T11 inside kerb", "s_start": 4128, "s_end": 4155, "side": "left", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "T11 exit kerb", "s_start": 4145, "s_end": 4190, "side": "right", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "T11 exit astroturf", "s_start": 4150, "s_end": 4200, "side": "right", "offset": 1.4, "width": 3, "surface": "astroturf" },
-
-    { "note": "Last corner: braking-zone run-off", "s_start": 5030, "s_end": 5120, "side": "left", "offset": 0, "width": 20, "surface": "runoff" },
-    { "note": "Last corner: big outside gravel trap", "s_start": 5120, "s_end": 5470, "side": "left", "offset": 4, "width": 40, "surface": "gravel" },
-    { "note": "Last corner inside kerb", "s_start": 5130, "s_end": 5320, "side": "right", "offset": 0, "width": 1.2, "surface": "kerb_flat" },
-    { "note": "Last corner exit kerb", "s_start": 5380, "s_end": 5510, "side": "left", "offset": 0, "width": 1.4, "surface": "kerb_flat" },
-    { "note": "Last corner exit astroturf", "s_start": 5390, "s_end": 5520, "side": "left", "offset": 1.4, "width": 2.6, "surface": "astroturf" }
-  ]
+ "description": "Surface layout for the Italian circuit as bands along the track. s = distance from the start line (m, driving direction), side = left/right of the driving direction, offset = metres beyond the track edge where the band starts (negative = on the road), width in metres. Later bands win where they overlap.",
+ "source": "APPROXIMATE: authored from general knowledge of the circuit using the corner positions found by tools/track_builder.py. Not yet checked against satellite imagery or OSM.",
+ "edgeLine": {
+  "width": 0.2,
+  "surface": "paint"
+ },
+ "verge": "grass",
+ "wallGap": 4,
+ "wallMin": 14,
+ "bands": [
+  {
+   "note": "T1 inside kerb: astroturf behind",
+   "s_start": 912,
+   "s_end": 948,
+   "side": "right",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T1 exit kerb: astroturf behind",
+   "s_start": 940,
+   "s_end": 962,
+   "side": "left",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T2 inside kerb: astroturf behind",
+   "s_start": 962,
+   "s_end": 992,
+   "side": "left",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T2 exit kerb: astroturf behind",
+   "s_start": 985,
+   "s_end": 1030,
+   "side": "right",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Curva Grande inside kerb: astroturf behind",
+   "s_start": 1400,
+   "s_end": 1500,
+   "side": "right",
+   "offset": 1.2,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Curva Grande exit kerb: astroturf behind",
+   "s_start": 1560,
+   "s_end": 1670,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T4 inside kerb: astroturf behind",
+   "s_start": 2130,
+   "s_end": 2160,
+   "side": "left",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T4 exit kerb: astroturf behind",
+   "s_start": 2155,
+   "s_end": 2172,
+   "side": "right",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T5 inside kerb: astroturf behind",
+   "s_start": 2172,
+   "s_end": 2200,
+   "side": "right",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T5 exit kerb: astroturf behind",
+   "s_start": 2195,
+   "s_end": 2235,
+   "side": "left",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "First Lesmo inside kerb: astroturf behind",
+   "s_start": 2570,
+   "s_end": 2615,
+   "side": "right",
+   "offset": 1.3,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "First Lesmo exit kerb: astroturf behind",
+   "s_start": 2600,
+   "s_end": 2650,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Second Lesmo inside kerb: astroturf behind",
+   "s_start": 2868,
+   "s_end": 2900,
+   "side": "right",
+   "offset": 1.3,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Second Lesmo exit kerb: astroturf behind",
+   "s_start": 2895,
+   "s_end": 2945,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T9 inside kerb: astroturf behind",
+   "s_start": 3940,
+   "s_end": 3972,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T9 exit kerb: astroturf behind",
+   "s_start": 3960,
+   "s_end": 3990,
+   "side": "right",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T10 inside kerb: astroturf behind",
+   "s_start": 4040,
+   "s_end": 4100,
+   "side": "right",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T10 exit kerb: astroturf behind",
+   "s_start": 4090,
+   "s_end": 4125,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T11 inside kerb: astroturf behind",
+   "s_start": 4128,
+   "s_end": 4155,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "T11 exit kerb: astroturf behind",
+   "s_start": 4145,
+   "s_end": 4190,
+   "side": "right",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Last corner inside kerb: astroturf behind",
+   "s_start": 5130,
+   "s_end": 5320,
+   "side": "right",
+   "offset": 1.2,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Last corner exit kerb: astroturf behind",
+   "s_start": 5380,
+   "s_end": 5510,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Main straight: pit lane on the right",
+   "s_start": 5560,
+   "s_end": 650,
+   "side": "right",
+   "offset": 6,
+   "width": 10,
+   "surface": "pitlane"
+  },
+  {
+   "note": "T1-2 chicane: escape road straight ahead",
+   "s_start": 860,
+   "s_end": 1010,
+   "side": "left",
+   "offset": 0,
+   "width": 35,
+   "surface": "runoff"
+  },
+  {
+   "note": "T1 inside kerb",
+   "s_start": 912,
+   "s_end": 948,
+   "side": "right",
+   "offset": 0,
+   "width": 1.5,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T1 sausage",
+   "s_start": 918,
+   "s_end": 942,
+   "side": "right",
+   "offset": 1.6,
+   "width": 0.5,
+   "surface": "kerb_sausage"
+  },
+  {
+   "note": "T1 exit kerb",
+   "s_start": 940,
+   "s_end": 962,
+   "side": "left",
+   "offset": 0,
+   "width": 1.5,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T2 inside kerb",
+   "s_start": 962,
+   "s_end": 992,
+   "side": "left",
+   "offset": 0,
+   "width": 1.5,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T2 sausage",
+   "s_start": 966,
+   "s_end": 988,
+   "side": "left",
+   "offset": 1.6,
+   "width": 0.5,
+   "surface": "kerb_sausage"
+  },
+  {
+   "note": "T2 run-off",
+   "s_start": 960,
+   "s_end": 1060,
+   "side": "right",
+   "offset": 4,
+   "width": 25,
+   "surface": "runoff"
+  },
+  {
+   "note": "T2 exit kerb",
+   "s_start": 985,
+   "s_end": 1030,
+   "side": "right",
+   "offset": 0,
+   "width": 1.5,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T2 exit astroturf",
+   "s_start": 990,
+   "s_end": 1030,
+   "side": "right",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Curva Grande: outside gravel",
+   "s_start": 1380,
+   "s_end": 1700,
+   "side": "left",
+   "offset": 4,
+   "width": 30,
+   "surface": "gravel"
+  },
+  {
+   "note": "Curva Grande inside kerb",
+   "s_start": 1400,
+   "s_end": 1500,
+   "side": "right",
+   "offset": 0,
+   "width": 1.2,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "Curva Grande exit astroturf",
+   "s_start": 1500,
+   "s_end": 1680,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.6,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Curva Grande exit kerb",
+   "s_start": 1560,
+   "s_end": 1670,
+   "side": "left",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "Second chicane: escape straight ahead",
+   "s_start": 2060,
+   "s_end": 2170,
+   "side": "right",
+   "offset": 0,
+   "width": 30,
+   "surface": "runoff"
+  },
+  {
+   "note": "T4 inside kerb",
+   "s_start": 2130,
+   "s_end": 2160,
+   "side": "left",
+   "offset": 0,
+   "width": 1.5,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T4 sausage",
+   "s_start": 2134,
+   "s_end": 2158,
+   "side": "left",
+   "offset": 1.6,
+   "width": 0.5,
+   "surface": "kerb_sausage"
+  },
+  {
+   "note": "T4 exit kerb",
+   "s_start": 2155,
+   "s_end": 2172,
+   "side": "right",
+   "offset": 0,
+   "width": 1.5,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T5 inside kerb",
+   "s_start": 2172,
+   "s_end": 2200,
+   "side": "right",
+   "offset": 0,
+   "width": 1.5,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T5 sausage",
+   "s_start": 2176,
+   "s_end": 2198,
+   "side": "right",
+   "offset": 1.6,
+   "width": 0.5,
+   "surface": "kerb_sausage"
+  },
+  {
+   "note": "T5 outside gravel",
+   "s_start": 2190,
+   "s_end": 2280,
+   "side": "left",
+   "offset": 4,
+   "width": 25,
+   "surface": "gravel"
+  },
+  {
+   "note": "T5 exit kerb",
+   "s_start": 2195,
+   "s_end": 2235,
+   "side": "left",
+   "offset": 0,
+   "width": 1.5,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T5 exit astroturf",
+   "s_start": 2200,
+   "s_end": 2240,
+   "side": "left",
+   "offset": 1.5,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "First Lesmo: outside gravel",
+   "s_start": 2540,
+   "s_end": 2700,
+   "side": "left",
+   "offset": 4,
+   "width": 30,
+   "surface": "gravel"
+  },
+  {
+   "note": "First Lesmo inside kerb",
+   "s_start": 2570,
+   "s_end": 2615,
+   "side": "right",
+   "offset": 0,
+   "width": 1.3,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "First Lesmo exit kerb",
+   "s_start": 2600,
+   "s_end": 2650,
+   "side": "left",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "First Lesmo exit astroturf",
+   "s_start": 2605,
+   "s_end": 2660,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Second Lesmo: outside gravel",
+   "s_start": 2860,
+   "s_end": 3000,
+   "side": "left",
+   "offset": 4,
+   "width": 30,
+   "surface": "gravel"
+  },
+  {
+   "note": "Second Lesmo inside kerb",
+   "s_start": 2868,
+   "s_end": 2900,
+   "side": "right",
+   "offset": 0,
+   "width": 1.3,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "Second Lesmo exit kerb",
+   "s_start": 2895,
+   "s_end": 2945,
+   "side": "left",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "Second Lesmo exit astroturf",
+   "s_start": 2900,
+   "s_end": 2950,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.5,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Third chicane T9: outside gravel",
+   "s_start": 3900,
+   "s_end": 4000,
+   "side": "right",
+   "offset": 3,
+   "width": 30,
+   "surface": "gravel"
+  },
+  {
+   "note": "T9 inside kerb",
+   "s_start": 3940,
+   "s_end": 3972,
+   "side": "left",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T9 exit kerb",
+   "s_start": 3960,
+   "s_end": 3990,
+   "side": "right",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T10 outside gravel",
+   "s_start": 4000,
+   "s_end": 4130,
+   "side": "left",
+   "offset": 3,
+   "width": 25,
+   "surface": "gravel"
+  },
+  {
+   "note": "T10 inside kerb",
+   "s_start": 4040,
+   "s_end": 4100,
+   "side": "right",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T10 exit kerb",
+   "s_start": 4090,
+   "s_end": 4125,
+   "side": "left",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T11 outside gravel",
+   "s_start": 4140,
+   "s_end": 4230,
+   "side": "right",
+   "offset": 4.4,
+   "width": 25,
+   "surface": "gravel"
+  },
+  {
+   "note": "T11 inside kerb",
+   "s_start": 4128,
+   "s_end": 4155,
+   "side": "left",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T11 exit kerb",
+   "s_start": 4145,
+   "s_end": 4190,
+   "side": "right",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "T11 exit astroturf",
+   "s_start": 4150,
+   "s_end": 4200,
+   "side": "right",
+   "offset": 1.4,
+   "width": 3,
+   "surface": "astroturf"
+  },
+  {
+   "note": "Last corner: braking-zone run-off",
+   "s_start": 5030,
+   "s_end": 5120,
+   "side": "left",
+   "offset": 0,
+   "width": 20,
+   "surface": "runoff"
+  },
+  {
+   "note": "Last corner: big outside gravel trap",
+   "s_start": 5120,
+   "s_end": 5470,
+   "side": "left",
+   "offset": 4,
+   "width": 40,
+   "surface": "gravel"
+  },
+  {
+   "note": "Last corner inside kerb",
+   "s_start": 5130,
+   "s_end": 5320,
+   "side": "right",
+   "offset": 0,
+   "width": 1.2,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "Last corner exit kerb",
+   "s_start": 5380,
+   "s_end": 5510,
+   "side": "left",
+   "offset": 0,
+   "width": 1.4,
+   "surface": "kerb_flat"
+  },
+  {
+   "note": "Last corner exit astroturf",
+   "s_start": 5390,
+   "s_end": 5520,
+   "side": "left",
+   "offset": 1.4,
+   "width": 2.6,
+   "surface": "astroturf"
+  }
+ ]
 }

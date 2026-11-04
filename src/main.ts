@@ -85,7 +85,7 @@ const scenery = track && trackName !== 'test' ? buildScenery(track, sceneryFor(t
 if (scenery) world.scene.add(scenery.group);
 
 // Braking line: the AI's speed plan, built for the player's own car.
-const BRAKING_LINE_SKILL = 0.95; // guide slightly inside the car's limit
+const BRAKING_LINE_SKILL = 0.85; // guide comfortably inside the car's limit (conservative braking points)
 const brakingLine = track ? new BrakingLine(world.scene, track) : null;
 function refreshBrakingPlan(): void {
   if (track && brakingLine) brakingLine.setPlan(new RacingPlan(track, params, BRAKING_LINE_SKILL), params);
