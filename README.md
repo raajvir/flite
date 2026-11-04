@@ -11,8 +11,9 @@ npm install        # first time only
 npm run dev        # then open http://localhost:5173
 ```
 
-Opening the page shows the start menu: pick a circuit (Italian, Belgian, British, Japanese, or the
-test area), laps, number of opponents (0 = practice), AI difficulty and handling set, then Start.
+Opening the page shows the start menu: pick a circuit (18 real circuits, or the test area), laps,
+number of opponents (0 = practice), AI difficulty and drive mode, then Start. A few circuits are
+older layouts because that is what the source data contains (marked "older layout").
 Esc opens the pause menu (resume, rewind, restart, settings, main menu, and the controls list).
 
 Drive modes: Default (the tuned feel set), Sim, Arcade (very grippy, snappy, drifty — an original
@@ -61,8 +62,13 @@ python3 -m venv tools/.venv && tools/.venv/bin/pip install numpy scipy pandas ma
 tools/.venv/bin/python tools/track_builder.py monza   # raw CSV -> data/tracks/monza/track.json
 tools/.venv/bin/python tools/plot_surfaces.py monza   # -> data/tracks/monza/surface_map.png
 tools/.venv/bin/python tools/elevation.py spa         # georeference via OSM + public DEM -> raw/elevation.csv
-tools/.venv/bin/python tools/author_surfaces.py spa   # corner_spec.json -> surfaces.json
+tools/.venv/bin/python tools/author_surfaces.py spa   # corner_spec.json -> surfaces.json (auto spec if missing)
+tools/.venv/bin/python tools/author_scenery.py spa    # default scenery.json (if missing)
 ```
+
+Adding a circuit: create `data/tracks/<id>/raw/` with the TUMFTM `centerline.csv` + `raceline.csv`,
+write `meta.json` (name, official length, `geo.bbox`, DEM dataset), then run the four tools above.
+The game picks it up automatically (every folder with track.json/info.json/surfaces.json is listed).
 
 Each track folder has `raw/` (source data + license), `meta.json` (name, official length, camber),
 `surfaces.json` (kerb/gravel/grass bands) and the built `track.json`.
@@ -92,7 +98,7 @@ docs/demos/  screenshots from each milestone
 - [~] AI racers (pulled forward): racing-line AI, overtaking, contacts, grid, laps, positions,
       difficulty slider, drafting, braking-line assist
 - [~] Scenery: grandstands, pits, tower, bridges, start lights, trees (positions approximate)
-- [~] M7 more circuits: Belgian, British, Japanese (real elevation; surfaces generated, approximate)
+- [~] M7 more circuits: 18 in total, most with real elevation; surfaces/scenery generated (approximate)
 - [~] M5 game loop: start menu, pause menu, timing tower, lap box, mini-map, rewind (ghost replay not yet)
 - [ ] M5 game loop
 - [ ] M6 validation
