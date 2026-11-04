@@ -157,3 +157,19 @@ describe('collision assist', () => {
     expect(Math.hypot(fa!.fx, fa!.fy)).toBeLessThanOrEqual(4 * surfaceTable().contact.carMaxForce + 1);
   });
 });
+
+describe('rewind', () => {
+  it('restoring a snapshot replays the race identically', () => {
+    const setups = [{ params: feel }, { params: feel, ai: { skill: 0.9 } }, { params: feel, ai: { skill: 0.86 } }];
+    const sess = new Session(world, setups, 3, 1, [2, 0, 1]);
+    const drive = { steer: 0, throttle: 1, brake: 0 };
+    for (let i = 0; i < 5000; i++) sess.step(drive);
+    const snap = sess.save();
+    for (let i = 0; i < 3000; i++) sess.step(drive);
+    const first = sess.cars.map((c) => c.state);
+    sess.restore(snap);
+    expect(sess.t).toBeCloseTo(snap.t, 9);
+    for (let i = 0; i < 3000; i++) sess.step(drive);
+    expect(sess.cars.map((c) => c.state)).toEqual(first);
+  }, 60_000);
+});

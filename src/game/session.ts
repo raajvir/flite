@@ -35,6 +35,17 @@ export interface SessionCar {
   ai: { plan: RacingPlan; state: AIState } | null;
 }
 
+/**
+ * Everything needed to put the session back to an earlier moment (for rewind).
+ * Car states, race records and AI states are never mutated in place (each step makes
+ * new objects), so a snapshot only needs references, not deep copies.
+ */
+export interface SessionSnapshot {
+  t: number;
+  steps: number;
+  cars: { state: CarState; race: RaceCar; inputs: DriverInputs; aiState: AIState | null }[];
+}
+
 export interface RaceSnapshot {
   t: number;
   countdown: number;
@@ -145,6 +156,26 @@ export class Session {
     const fresh = initialState({ x: pos.x, y: 0, z: pos.z, yaw: this.world.headingAt(s) }, c.params.idleRpm, c.state.battery);
     c.state = { ...fresh, t: c.state.t, distance: c.state.distance };
     if (c.ai) c.ai.state = initialAIState();
+  }
+
+  save(): SessionSnapshot {
+    return {
+      t: this.t,
+      steps: this.steps,
+      cars: this.cars.map((c) => ({ state: c.state, race: c.race, inputs: c.inputs, aiState: c.ai?.state ?? null })),
+    };
+  }
+
+  restore(snap: SessionSnapshot): void {
+    this.t = snap.t;
+    this.steps = snap.steps;
+    snap.cars.forEach((sc, i) => {
+      const c = this.cars[i]!;
+      c.state = sc.state;
+      c.race = sc.race;
+      c.inputs = sc.inputs;
+      if (c.ai && sc.aiState) c.ai.state = sc.aiState;
+    });
   }
 
   setParams(i: number, p: CarParams): void {

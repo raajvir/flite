@@ -26,7 +26,10 @@ export type ToWorker =
   | { type: 'reset' }
   /** Restart the race from the grid (Shift+R) */
   | { type: 'restart' }
-  | { type: 'telemetry'; recording: boolean };
+  | { type: 'telemetry'; recording: boolean }
+  | { type: 'pause'; paused: boolean }
+  /** Jump back in time (seconds), like a flashback. Keeps the pause state. */
+  | { type: 'rewind'; seconds: number };
 
 export type FromWorker =
   | {
@@ -37,5 +40,8 @@ export type FromWorker =
       race: RaceSnapshot | null;
       /** Sim steps actually executed per wall-clock second (should read ~1000). */
       stepsPerSecond: number;
+      paused: boolean;
+      /** How far back a rewind can currently go, s */
+      rewindAvailable: number;
     }
   | { type: 'telemetryCSV'; csv: string; rows: number };

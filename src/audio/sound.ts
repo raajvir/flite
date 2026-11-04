@@ -106,6 +106,11 @@ export class CarSound {
     this.crunchGain = mk('highpass', t.crunchHz);
   }
 
+  /** Silence everything while the game is paused (keeps the mute setting). */
+  setPaused(p: boolean): void {
+    if (this.ctx) this.master.gain.setTargetAtTime(p || this.muted ? 0 : SOUND_TUNING.masterVolume, this.ctx.currentTime, 0.02);
+  }
+
   toggleMute(): void {
     this.muted = !this.muted;
     if (this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : SOUND_TUNING.masterVolume, this.ctx.currentTime, 0.02);

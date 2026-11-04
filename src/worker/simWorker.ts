@@ -11,7 +11,7 @@
 import carFile from '../../data/cars/openwheel.json';
 import { aiCarParams } from '../ai/aiParams';
 import { skillsFor } from '../ai/difficulty';
-import { Session } from '../game/session';
+import { Session, type SessionSnapshot } from '../game/session';
 import { SIM_DT } from '../sim/constants';
 import { loadCarParams, type CarFile, type CarParams, type ParamOverrides, type ParamSetName } from '../sim/params';
 import { step } from '../sim/step';
@@ -24,6 +24,9 @@ import type { FromWorker, StartOptions, ToWorker } from './protocol';
 const TICK_MS = 4;
 /** If the tab stalls (e.g. backgrounded), don't try to catch up more than this. */
 const MAX_STEPS_PER_TICK = 250;
+/** Rewind history: a snapshot every N steps, keeping this many (100 x 120 = 12 s). */
+const HISTORY_EVERY = 100;
+const HISTORY_LENGTH = 120;
 /** Telemetry sample every N sim steps (10 -> 100 Hz). */
 const TELEMETRY_DECIMATION = 10;
 
@@ -49,11 +52,17 @@ let rateWindowStart = 0;
 let rateWindowSteps = 0;
 let stepsPerSecond = 0;
 let recording = false;
+let paused = false;
+type Snap = { t: number; session: SessionSnapshot | null; solo: CarState | null };
+let history: Snap[] = [];
+let simT = 0;
 let telemetry: TelemetryValue[][] = [];
 
 const load = (set: ParamSetName, overrides: ParamOverrides): CarParams => loadCarParams(CAR, set, overrides);
 
 function build(o: StartOptions): void {
+  history = [];
+  simT = 0;
   const playerParams = load(o.paramSet, o.overrides);
   if (o.track === 'test') {
     session = null;
@@ -83,6 +92,11 @@ function step1(): void {
   if (session) session.step(inputs);
   else if (solo) solo.state = step(solo.state, inputs, solo.params, SIM_DT);
   stepCount++;
+  simT += SIM_DT;
+  if (stepCount % HISTORY_EVERY === 0) {
+    history.push({ t: simT, session: session ? session.save() : null, solo: solo ? solo.state : null });
+    if (history.length > HISTORY_LENGTH) history.shift();
+  }
   if (recording && stepCount % TELEMETRY_DECIMATION === 0) {
     const s = playerState();
     if (s) telemetry.push(telemetryRow(s, inputs, surfaceNames));
@@ -93,6 +107,7 @@ function tick(): void {
   const now = performance.now();
   accumulator += (now - lastWall) / 1000;
   lastWall = now;
+  if (paused) accumulator = 0;
   let n = 0;
   while (accumulator >= SIM_DT && n < MAX_STEPS_PER_TICK) {
     step1();
@@ -107,11 +122,29 @@ function tick(): void {
     rateWindowStart = now;
     rateWindowSteps = 0;
   }
-  if (n > 0) {
-    const states = session ? session.cars.map((c) => c.state) : solo ? [solo.state] : [];
-    ctx.postMessage({ type: 'snapshot', states, playerIndex, race: session ? session.snapshot() : null, stepsPerSecond });
-  }
+  if (n > 0) postSnapshot();
   setTimeout(tick, TICK_MS);
+}
+
+function postSnapshot(): void {
+  const states = session ? session.cars.map((c) => c.state) : solo ? [solo.state] : [];
+  const rewindAvailable = history.length ? simT - history[0]!.t : 0;
+  ctx.postMessage({ type: 'snapshot', states, playerIndex, race: session ? session.snapshot() : null, stepsPerSecond, paused, rewindAvailable });
+}
+
+/** Restore the newest saved moment at least `seconds` ago (or the oldest we have). */
+function rewind(seconds: number): void {
+  if (!history.length) return;
+  const target = simT - seconds;
+  let k = history.length - 1;
+  while (k > 0 && history[k]!.t > target) k--;
+  const snap = history[k]!;
+  history = history.slice(0, k + 1);
+  simT = snap.t;
+  if (session && snap.session) session.restore(snap.session);
+  if (solo && snap.solo) solo.state = snap.solo;
+  accumulator = 0;
+  postSnapshot();
 }
 
 ctx.onmessage = (e) => {
@@ -151,6 +184,13 @@ ctx.onmessage = (e) => {
       break;
     case 'restart':
       if (options) build(options);
+      break;
+    case 'pause':
+      paused = msg.paused;
+      postSnapshot();
+      break;
+    case 'rewind':
+      rewind(msg.seconds);
       break;
     case 'telemetry':
       if (msg.recording) {

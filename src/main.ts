@@ -20,12 +20,15 @@ import { loadTrack, surfaceTable, type TrackName } from './sim/tracks';
 import type { TrackWorld } from './sim/trackWorld';
 import type { CarState } from './sim/types';
 import { TuningPanel } from './ui/tuningPanel';
+import { Dash, type DashRace } from './ui/dash';
 import type { RaceSnapshot } from './game/session';
 import type { FromWorker, ToWorker } from './worker/protocol';
 
 const CAR = carFile as unknown as CarFile;
 /** Only show the slipstream meter above this speed (it's meaningless on the grid), m/s. */
 const SLIPSTREAM_HUD_MIN_SPEED = 20;
+/** Z jumps back this far. */
+const REWIND_SECONDS = 5;
 const query = new URLSearchParams(location.search);
 const trackName: TrackName = query.get('track') === 'test' ? 'test' : 'monza';
 const aiCount = Math.max(0, Math.min(15, Number(query.get('ai') ?? 7)));
@@ -89,6 +92,8 @@ const keyboard = new KeyboardDriver();
 const gamepad = new GamepadDriver();
 const hud = document.getElementById('hud') as HTMLElement;
 const center = document.getElementById('center') as HTMLElement;
+const dash = new Dash();
+let paused = false;
 
 // ?demo: autopilot (race: the worker's AI drives your car; test area: scripted laps). ?demo=donut on the test area.
 const demoMode = query.get('demo');
@@ -155,6 +160,49 @@ function fitDebugCam(): void {
 }
 fitDebugCam();
 
+// --- Rear-view mirror: render behind the car into a small texture, then draw it flipped
+// (like a real mirror) in a frame at the top of the screen. B toggles it.
+const MIRROR = { width: 380, height: 95, top: 10, fov: 38, height3d: 0.95, behind: 2.4, lookBack: 30 };
+const mirrorTarget = new THREE.WebGLRenderTarget(MIRROR.width * 2, MIRROR.height * 2);
+const mirrorCam = new THREE.PerspectiveCamera(MIRROR.fov, MIRROR.width / MIRROR.height, 0.3, 1500);
+const mirrorScene = new THREE.Scene();
+const mirrorQuadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+mirrorTarget.texture.repeat.x = -1;
+mirrorTarget.texture.offset.x = 1;
+mirrorScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: mirrorTarget.texture })));
+const mirrorFrame = document.createElement('div');
+Object.assign(mirrorFrame.style, {
+  position: 'fixed', left: '50%', top: `${MIRROR.top - 3}px`, width: `${MIRROR.width}px`, height: `${MIRROR.height}px`,
+  transform: 'translateX(-50%)', border: '3px solid #1e2024', borderRadius: '10px', pointerEvents: 'none',
+});
+document.body.appendChild(mirrorFrame);
+let mirrorOn = true;
+world.renderer.shadowMap.autoUpdate = false; // update shadows once per frame, not per camera
+
+function renderMirror(car: CarState): void {
+  const fx = -Math.sin(car.yaw), fz = -Math.cos(car.yaw);
+  // Just behind the rear wing, so the view isn't filled by our own car.
+  mirrorCam.position.set(car.x - fx * MIRROR.behind, car.y + MIRROR.height3d, car.z - fz * MIRROR.behind);
+  mirrorCam.lookAt(car.x - fx * MIRROR.lookBack, car.y + 0.8, car.z - fz * MIRROR.lookBack);
+  world.renderer.setRenderTarget(mirrorTarget);
+  world.renderer.render(world.scene, mirrorCam);
+  world.renderer.setRenderTarget(null);
+}
+
+function drawMirror(): void {
+  const r = world.renderer;
+  const x = (window.innerWidth - MIRROR.width) / 2;
+  const y = window.innerHeight - MIRROR.top - MIRROR.height;
+  r.autoClear = false;
+  r.setScissorTest(true);
+  r.setScissor(x, y, MIRROR.width, MIRROR.height);
+  r.setViewport(x, y, MIRROR.width, MIRROR.height);
+  r.render(mirrorScene, mirrorQuadCam);
+  r.setScissorTest(false);
+  r.setViewport(0, 0, window.innerWidth, window.innerHeight);
+  r.autoClear = true;
+}
+
 // --- Worker.
 const worker = new Worker(new URL('./worker/simWorker.ts', import.meta.url), { type: 'module' });
 const send = (m: ToWorker) => worker.postMessage(m);
@@ -196,6 +244,17 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'KeyM') sound.toggleMute();
   if (e.code === 'KeyO') panel.toggle();
+  if (e.code === 'Escape') {
+    paused = !paused;
+    send({ type: 'pause', paused });
+    sound.setPaused(paused);
+    center.textContent = paused ? 'PAUSED' : '';
+    center.dataset.sub = paused ? 'Esc resume · Z rewind 5 s' : '';
+  }
+  if (e.code === 'KeyZ') {
+    send({ type: 'rewind', seconds: REWIND_SECONDS });
+    views.forEach((v) => v.interp.clear());
+  }
   if (e.code === 'KeyR') send({ type: 'reset' });
   if (e.code === 'Backspace') {
     send({ type: 'restart' });
@@ -203,6 +262,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.code === 'KeyC') cam.toggle();
   if (e.code === 'KeyV') debugView = !debugView;
+  if (e.code === 'KeyB') mirrorOn = !mirrorOn;
   if (e.code === 'KeyL') panel.setBrakingLine(!panel.race.brakingLine);
   if (e.code === 'KeyP') {
     paramSet = paramSet === 'feel' ? 'sim' : 'feel';
@@ -255,15 +315,6 @@ let fps = 0;
 let worstFrameMs = 0;
 let worstShown = 0;
 
-const fmt = (t: number | null) => {
-  if (t === null) return '--:--.---';
-  const m = Math.floor(t / 60);
-  return `${m}:${(t - m * 60).toFixed(3).padStart(6, '0')}`;
-};
-const slipBar = (w: CarState['wheels'][number]) => {
-  const rho = Math.hypot(w.kappa / params.tirePeakSlipRatio, w.tanAlpha / Math.tan(params.tirePeakSlipAngle));
-  return rho < 0.6 ? '·' : rho < 1.0 ? 'o' : 'O';
-};
 
 function frame(now: number): void {
   const dt = Math.min(0.1, (now - last) / 1000);
@@ -297,7 +348,12 @@ function frame(now: number): void {
   }
   const mapView = debugView && track !== null;
   world.scene.fog = mapView ? null : fog; // fog would wash out the map seen from 2 km up
+  const showMirror = mirrorOn && !mapView && ps !== null;
+  world.renderer.shadowMap.needsUpdate = true;
+  if (showMirror) renderMirror(ps!);
   world.renderer.render(world.scene, mapView ? debugCam : cam.camera);
+  if (showMirror) drawMirror();
+  mirrorFrame.style.display = showMirror ? 'block' : 'none';
 
   fpsFrames++;
   worstFrameMs = Math.max(worstFrameMs, dt * 1000);
@@ -309,28 +365,28 @@ function frame(now: number): void {
     worstFrameMs = 0;
   }
   if (ps) {
-    const s = ps;
-    const [fl, fr, rl, rr] = s.wheels;
-    let raceText = '';
+    let dashRace: DashRace | null = null;
     if (race) {
       const me = race.cars[playerIndex]!;
-      const pos = race.order.indexOf(playerIndex) + 1;
-      raceText =
-        `P${pos}/${race.order.length}   lap ${Math.min(Math.max(me.lap, 1), race.laps)}/${race.laps}${me.finished ? '  FINISHED' : ''}\n` +
-        `lap    ${fmt(me.lap >= 1 ? me.lapTime : null)}\n` +
-        `last   ${fmt(me.lastLap)}   best ${fmt(me.bestLap)}\n` +
-        (me.draft > 0.05 && Math.hypot(ps.u, ps.v) > SLIPSTREAM_HUD_MIN_SPEED ? `SLIPSTREAM ${'▮'.repeat(Math.ceil(me.draft * 5)).padEnd(5, '▯')}\n` : '');
+      dashRace = {
+        position: race.order.indexOf(playerIndex) + 1,
+        cars: race.order.length,
+        lap: me.lap,
+        laps: race.laps,
+        lapTime: me.lap >= 1 ? me.lapTime : null,
+        lastLap: me.lastLap,
+        bestLap: me.bestLap,
+        draft: Math.hypot(ps.u, ps.v) > SLIPSTREAM_HUD_MIN_SPEED ? me.draft : 0,
+        finished: me.finished,
+      };
       const c = race.countdown;
-      center.textContent = c > 0 ? String(Math.ceil(c)) : race.t < race.countdown + 1 ? 'GO!' : '';
+      if (!paused) center.textContent = c > 0 ? String(Math.ceil(c)) : race.t < race.countdown + 1 ? 'GO!' : '';
     }
+    dash.update(ps, params, surfaces, dashRace);
+    // Top-left: debug info only (the dashboard at the bottom has the driving info).
     hud.textContent =
-      raceText +
-      `speed  ${(Math.hypot(s.u, s.v) * 3.6).toFixed(0).padStart(4)} km/h   gear ${s.gear < 0 ? 'R' : s.gear}\n` +
-      `rpm    ${s.rpm.toFixed(0).padStart(5)}   lat ${(Math.abs(s.ayFiltered) / 9.81).toFixed(1)} g\n` +
-      `grip   ${slipBar(fl)} ${slipBar(fr)}   ${surfaces.list[fl.surface]?.name ?? ''}\n` +
-      `       ${slipBar(rl)} ${slipBar(rr)}\n` +
-      `fps    ${fps.toFixed(0).padStart(4)}   worst ${worstShown.toFixed(1)} ms   sim ${simRate.toFixed(0)} Hz\n` +
-      `set    ${paramSet} (P)   cam ${debugView ? 'map' : cam.mode}   ${demoMode !== null ? 'DEMO' : gamepad.active ? 'gamepad' : 'keyboard'}` +
+      `fps ${fps.toFixed(0)}  worst ${worstShown.toFixed(1)} ms  sim ${simRate.toFixed(0)} Hz\n` +
+      `set ${paramSet} (P)  cam ${debugView ? 'map' : cam.mode}  ${demoMode !== null ? 'DEMO' : gamepad.active ? 'gamepad' : 'keyboard'}` +
       (recording ? '\n● REC telemetry (T to save)' : '');
   }
   requestAnimationFrame(frame);
