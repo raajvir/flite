@@ -11,42 +11,13 @@
 import * as THREE from 'three';
 import type { Surface } from '../sim/surfaces';
 import type { SurfaceBand, TrackWorld } from '../sim/trackWorld';
+import { Builder } from './meshBuilder';
 
 const STEP = 2; // m between cross-sections along the track
 const VERGE_BEYOND_WALL = 40; // m of grass drawn outside the walls
 const OVERLAY_LIFT = 0.02; // m
 const GROUND_DROP = 0.25; // m: infinite ground plane sits this far below
 const GROUND_SIZE = 8000; // m
-
-class Builder {
-  readonly pos: number[] = [];
-  readonly col: number[] = [];
-  private readonly c = new THREE.Color();
-
-  tri(a: number[], b: number[], c: number[], color: string): void {
-    this.c.set(color);
-    for (const p of [a, b, c]) {
-      this.pos.push(p[0]!, p[1]!, p[2]!);
-      this.col.push(this.c.r, this.c.g, this.c.b);
-    }
-  }
-
-  /** Quad a-b-c-d (counter-clockwise seen from above/outside). */
-  quad(a: number[], b: number[], c: number[], d: number[], color: string): void {
-    this.tri(a, b, c, color);
-    this.tri(a, c, d, color);
-  }
-
-  mesh(material: THREE.Material): THREE.Mesh {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
-    g.computeVertexNormals();
-    const m = new THREE.Mesh(g, material);
-    m.receiveShadow = true;
-    return m;
-  }
-}
 
 /** Sample distances from s0 to s1 (wrapping), every STEP, including both ends. */
 function samples(world: TrackWorld, s0: number, s1: number): number[] {

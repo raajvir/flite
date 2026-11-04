@@ -9,6 +9,7 @@
  * test area with just the player's car.
  */
 import carFile from '../../data/cars/openwheel.json';
+import { skillsFor } from '../ai/difficulty';
 import { Session } from '../game/session';
 import { SIM_DT } from '../sim/constants';
 import { loadCarParams, type CarFile, type CarParams, type ParamOverrides, type ParamSetName } from '../sim/params';
@@ -24,9 +25,6 @@ const TICK_MS = 4;
 const MAX_STEPS_PER_TICK = 250;
 /** Telemetry sample every N sim steps (10 -> 100 Hz). */
 const TELEMETRY_DECIMATION = 10;
-/** AI skill spread: best to worst. */
-const AI_SKILL_MAX = 0.93;
-const AI_SKILL_MIN = 0.85;
 
 const ctx = self as unknown as {
   postMessage(msg: FromWorker): void;
@@ -65,11 +63,11 @@ function build(o: StartOptions): void {
   solo = null;
   const world = loadTrack(o.track);
   const aiParams = load('feel', {});
-  const setups: { params: CarParams; ai?: { skill: number } }[] = [o.autopilot ? { params: aiParams, ai: { skill: AI_SKILL_MAX } } : { params: playerParams }];
-  for (let k = 0; k < o.aiCount; k++) {
-    const skill = AI_SKILL_MAX - ((AI_SKILL_MAX - AI_SKILL_MIN) * k) / Math.max(1, o.aiCount - 1);
-    setups.push({ params: aiParams, ai: { skill } });
-  }
+  const skills = skillsFor(o.aiDifficulty, o.aiCount);
+  const setups: { params: CarParams; ai?: { skill: number } }[] = [
+    o.autopilot ? { params: aiParams, ai: { skill: skillsFor(o.aiDifficulty, 1)[0]! } } : { params: playerParams },
+  ];
+  for (const skill of skills) setups.push({ params: aiParams, ai: { skill } });
   // Player starts at the back of the grid; AI in skill order ahead.
   const grid = setups.map((_, i) => (i === 0 ? o.aiCount : i - 1));
   session = new Session(world, setups, o.laps, 3, grid);
@@ -138,6 +136,13 @@ ctx.onmessage = (e) => {
     }
     case 'inputs':
       inputs = msg.inputs;
+      break;
+    case 'setAIDifficulty':
+      if (options) options = { ...options, aiDifficulty: msg.difficulty };
+      if (session && options) {
+        const skills = skillsFor(msg.difficulty, options.aiCount);
+        session.setAISkills(options.autopilot ? [skillsFor(msg.difficulty, 1)[0]!, ...skills] : skills);
+      }
       break;
     case 'reset':
       if (session) session.resetCar(playerIndex);

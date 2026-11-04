@@ -1,0 +1,18 @@
+{
+  "description": "Scenery for the Italian circuit. Generic, original structures (no real buildings copied, no branding). Positions are APPROXIMATE. s = distance from the start line (m), side = left/right of the driving direction, gap = metres behind the wall.",
+  "grandstands": [
+    { "note": "Main grandstand opposite the pits", "s_start": 5640, "s_end": 260, "side": "left", "gap": 4, "rows": 14, "roof": true },
+    { "note": "First chicane, outside", "s_start": 860, "s_end": 1000, "side": "left", "gap": 3, "rows": 10, "roof": false },
+    { "note": "First chicane exit", "s_start": 1000, "s_end": 1080, "side": "right", "gap": 3, "rows": 8, "roof": false },
+    { "note": "Second chicane", "s_start": 2080, "s_end": 2180, "side": "right", "gap": 3, "rows": 8, "roof": false },
+    { "note": "First Lesmo", "s_start": 2560, "s_end": 2640, "side": "left", "gap": 3, "rows": 8, "roof": false },
+    { "note": "Third chicane", "s_start": 3900, "s_end": 4020, "side": "right", "gap": 3, "rows": 9, "roof": false },
+    { "note": "Last corner, outside", "s_start": 5180, "s_end": 5440, "side": "left", "gap": 3, "rows": 12, "roof": true },
+    { "note": "Last corner, inside", "s_start": 5160, "s_end": 5300, "side": "right", "gap": 3, "rows": 8, "roof": false }
+  ],
+  "pits": { "s_start": 5600, "s_end": 560, "side": "right", "gap": 1, "depth": 16, "height": 9 },
+  "towers": [{ "s": 120, "side": "right", "gap": 22, "height": 20 }],
+  "bridges": [{ "s": 1210 }, { "s": 3350 }, { "s": 4700 }],
+  "gantry": { "s": 0 },
+  "trees": { "every": 6, "perStation": 3, "minGap": 8, "maxGap": 160, "clearance": 6, "seed": 7 }
+}

@@ -22,11 +22,15 @@ URL options:
 - `?set=sim` — use the `sim` handling set instead of `feel`
 
 Controls: ↑/W throttle · ↓/S/Space brake (hold when stopped = reverse) · ←→/AD steer ·
-R back on track · Shift+R restart race · V map view · C chase/cockpit camera · P switch feel/sim handling · O tuning panel · M mute ·
+R back on track · Shift+R restart race · V map view · L braking line · C chase/cockpit camera · P switch feel/sim handling · O tuning panel · M mute ·
 T start/stop telemetry recording (saves a CSV).
 Gamepad: left stick steer, right trigger throttle, left trigger brake (touch it to take over).
 
 Tip: full lock + full throttle from a standstill (feel set) = donut.
+
+Race settings live in the tuning panel (O → Race): AI difficulty (applies immediately) and the
+braking line (green = flat out, yellow = slow down soon, red = brake now). Running close behind
+another car gives a slipstream (less drag, a little less downforce); the HUD shows its strength.
 
 ## Checks
 
@@ -70,7 +74,9 @@ docs/demos/  screenshots from each milestone
 - [x] M2 car model + feel tuning (+ live tuning panel, press O)
 - [x] M3 surface system (per-wheel grip, drag, bumps; dust, rumble; test patches not built)
 - [~] M4 first circuit (Italian circuit): drivable, kerbs/gravel/camber, map view; surface layout still to check against satellite imagery
-- [~] AI racers (pulled forward): racing-line AI, overtaking, contacts, grid, laps, positions
+- [~] AI racers (pulled forward): racing-line AI, overtaking, contacts, grid, laps, positions,
+      difficulty slider, drafting, braking-line assist
+- [~] Scenery: grandstands, pits, tower, bridges, start lights, trees (positions approximate)
 - [ ] M5 game loop
 - [ ] M6 validation
 - [ ] M7 more circuits

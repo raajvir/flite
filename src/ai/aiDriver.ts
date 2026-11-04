@@ -52,6 +52,17 @@ export interface AIState {
 
 export const initialAIState = (): AIState => ({ offset: 0, stuckFor: 0 });
 
+/**
+ * Deceleration the speed plan assumes when braking from speed v (grip incl. downforce,
+ * scaled by skill and AI_TUNING.brakeFraction, plus aero drag). Shared with the braking line.
+ */
+export function planBrakingDecel(p: CarParams, skill: number, v: number): number {
+  const muX = p.tireMuX * skill * AI_TUNING.brakeFraction;
+  const aeroK = 0.5 * AIR_DENSITY * p.liftArea;
+  const dragK = 0.5 * AIR_DENSITY * p.dragArea;
+  return (muX * (p.mass * GRAVITY + aeroK * v * v)) / p.mass + (dragK * v * v) / p.mass;
+}
+
 /** Precomputed racing line + speed plan for one car type and skill. */
 export class RacingPlan {
   readonly vmax: Float64Array;
@@ -61,7 +72,7 @@ export class RacingPlan {
   constructor(
     readonly world: TrackWorld,
     p: CarParams,
-    skill: number,
+    readonly skill: number,
   ) {
     const t = AI_TUNING;
     const n = world.n;
@@ -91,7 +102,6 @@ export class RacingPlan {
     }
 
     const mu = p.tireMuY * skill;
-    const muX = p.tireMuX * skill * t.brakeFraction;
     const aeroK = 0.5 * AIR_DENSITY * p.liftArea; // downforce = aeroK v^2
     const dragK = 0.5 * AIR_DENSITY * p.dragArea;
     const v = new Float64Array(n);
@@ -105,7 +115,7 @@ export class RacingPlan {
       for (let j = 2 * n - 1; j >= 0; j--) {
         const i = j % n, nx = (i + 1) % n;
         const vn = v[nx]!;
-        const decel = (muX * (p.mass * GRAVITY + aeroK * vn * vn)) / p.mass + (dragK * vn * vn) / p.mass;
+        const decel = planBrakingDecel(p, skill, vn);
         v[i] = Math.min(v[i]!, Math.sqrt(vn * vn + 2 * decel * this.ds));
       }
       for (let j = 0; j < 2 * n; j++) {

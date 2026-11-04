@@ -138,12 +138,12 @@ export function createCarModel(geo: CarGeometryInput, bodyColor: number = CAR_CO
   body.add(
     loft(
       [
-        { z: zf - 0.95, halfWidth: 0.15, top: 0.2, bottom: 0.1 },
+        { z: zf - 0.8, halfWidth: 0.15, top: 0.2, bottom: 0.1 },
         { z: zf, halfWidth: 0.2, top: 0.34, bottom: 0.1 },
         { z: zf + 1.05, halfWidth: 0.32, top: 0.56, bottom: 0.06 },
         { z: zf + 1.95, halfWidth: 0.34, top: 0.6, bottom: 0.06 },
         { z: zr - 0.25, halfWidth: 0.24, top: 0.48, bottom: 0.08 },
-        { z: zr + 0.4, halfWidth: 0.14, top: 0.36, bottom: 0.1 },
+        { z: zr + 0.3, halfWidth: 0.14, top: 0.36, bottom: 0.1 },
       ],
       C.body,
     ),
@@ -183,15 +183,15 @@ export function createCarModel(geo: CarGeometryInput, bodyColor: number = CAR_CO
   body.add(box(0.2, 0.14, 0.02, C.black, 0, 0.77, zf + 1.94));
 
   // --- Front wing: flat plate with black endplates.
-  const fwZ = zf - 0.7;
-  body.add(box(1.9, 0.04, 0.5, C.body, 0, 0.1, fwZ));
-  for (const side of [-1, 1]) body.add(box(0.04, 0.26, 0.6, C.black, side * 0.95, 0.17, fwZ));
+  const fwZ = zf - 0.55;
+  body.add(box(1.9, 0.04, 0.45, C.body, 0, 0.1, fwZ));
+  for (const side of [-1, 1]) body.add(box(0.04, 0.26, 0.5, C.black, side * 0.95, 0.17, fwZ));
 
   // --- Rear wing: flat plate with tall black endplates, on a pylon.
-  const rwZ = zr + 0.45;
-  body.add(box(1.0, 0.04, 0.45, C.body, 0, 0.92, rwZ));
-  for (const side of [-1, 1]) body.add(box(0.04, 0.5, 0.6, C.black, side * 0.5, 0.78, rwZ));
-  body.add(box(0.06, 0.5, 0.1, C.black, 0, 0.62, rwZ - 0.05));
+  const rwZ = zr + 0.35;
+  body.add(box(1.0, 0.04, 0.4, C.body, 0, 0.88, rwZ));
+  for (const side of [-1, 1]) body.add(box(0.04, 0.46, 0.5, C.black, side * 0.5, 0.74, rwZ));
+  body.add(box(0.06, 0.46, 0.1, C.black, 0, 0.6, rwZ - 0.05));
 
   // --- Wheels (root level, so they stay on the ground) + arms fixed to them.
   const wheels: THREE.Object3D[] = [];

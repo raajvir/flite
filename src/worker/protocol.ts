@@ -13,12 +13,15 @@ export interface StartOptions {
   laps: number;
   /** The AI drives the player's car too (demo mode) */
   autopilot: boolean;
+  /** 0..1 */
+  aiDifficulty: number;
 }
 
 export type ToWorker =
   | { type: 'start'; options: StartOptions }
   | { type: 'setParams'; paramSet: ParamSetName; overrides: ParamOverrides }
   | { type: 'inputs'; inputs: DriverInputs }
+  | { type: 'setAIDifficulty'; difficulty: number }
   /** Put the player back on track (R) */
   | { type: 'reset' }
   /** Restart the race from the grid (Shift+R) */

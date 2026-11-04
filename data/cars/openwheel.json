@@ -25,6 +25,11 @@
 
       "dragArea": { "value": 1.15, "unit": "m^2", "source": "estimate", "note": "Cd * frontal area" },
       "liftArea": { "value": 4.5, "unit": "m^2", "source": "estimate", "note": "Cl * frontal area (downforce)" },
+      "draftLength": { "value": 40, "unit": "m", "source": "estimate", "note": "slipstream reaches this far behind a car" },
+      "draftWidth": { "value": 1.6, "unit": "m", "source": "estimate", "note": "half-width of the slipstream right behind the car; it widens with distance" },
+      "draftSpread": { "value": 0.03, "unit": "m/m", "source": "estimate", "note": "slipstream half-width growth per metre behind" },
+      "draftMaxDragReduction": { "value": 0.35, "unit": "-", "source": "estimate", "note": "drag cut when tucked right in" },
+      "draftMaxLiftLoss": { "value": 0.2, "unit": "-", "source": "estimate", "note": "downforce lost in dirty air when tucked right in" },
       "aeroBalanceFront": { "value": 0.42, "unit": "-", "source": "estimate" },
 
       "maxSteerAngle": { "value": 0.32, "unit": "rad", "source": "estimate", "note": "road-wheel lock at standstill" },
@@ -51,7 +56,7 @@
       "idleRpm": { "value": 4000, "unit": "rpm", "source": "estimate" },
       "revLimitRpm": { "value": 12500, "unit": "rpm", "source": "estimate" },
       "engineBrakeTorque": { "value": 120, "unit": "N*m", "source": "estimate", "note": "closed-throttle torque at the rev limit, scales to 0 at idle" },
-      "gearRatios": { "value": [4.53, 3.74, 3.1, 2.56, 2.12, 1.75, 1.45, 1.2], "unit": "-", "source": "estimate" },
+      "gearRatios": { "value": [4.53, 3.67, 2.98, 2.42, 1.96, 1.59, 1.29, 1.05], "unit": "-", "source": "estimate", "note": "top gear tall enough that drag, not the limiter, sets top speed (so slipstreaming helps)" },
       "reverseRatio": { "value": 4.0, "unit": "-", "source": "estimate" },
       "finalDrive": { "value": 4.0, "unit": "-", "source": "estimate" },
       "drivetrainEfficiency": { "value": 0.92, "unit": "-", "source": "estimate" },

@@ -47,9 +47,9 @@ function normalisedSlip(w: WheelState, t: CarParams['derived']['tire']): number 
 const isLeft = (i: number) => i % 2 === 0;
 
 /** Static + aero + weight-transfer loads, N, in wheel order. Never negative. */
-export function wheelLoads(p: CarParams, u: number, axF: number, ayF: number): [number, number, number, number] {
+export function wheelLoads(p: CarParams, u: number, axF: number, ayF: number, liftScale = 1): [number, number, number, number] {
   const weight = p.mass * GRAVITY;
-  const downforce = 0.5 * AIR_DENSITY * p.liftArea * u * u;
+  const downforce = 0.5 * AIR_DENSITY * p.liftArea * liftScale * u * u;
   let front = weight * p.weightFront + downforce * p.aeroBalanceFront;
   let rear = weight * (1 - p.weightFront) + downforce * (1 - p.aeroBalanceFront);
 
@@ -149,7 +149,7 @@ export function step(
   const ground: GroundQuery[] = geom.map(({ xi, yi }) =>
     world.query(s.x + xi * fwdX + yi * leftX, s.z + xi * fwdZ + yi * leftZ),
   );
-  const loads = wheelLoads(p, s.u, s.axFiltered, s.ayFiltered);
+  const loads = wheelLoads(p, s.u, s.axFiltered, s.ayFiltered, ext.liftScale ?? 1);
   const bumpFade = Math.min(1, Math.abs(s.u) / contact.bumpFullSpeed);
   const bumps = ground.map((g, i) => {
     const { xi, yi } = geom[i]!;
@@ -266,7 +266,7 @@ export function step(
   sumMz += ext.mz;
 
   // --- 6. Aero drag + stability assist.
-  sumFx -= 0.5 * AIR_DENSITY * p.dragArea * s.u * Math.abs(s.u);
+  sumFx -= 0.5 * AIR_DENSITY * p.dragArea * (ext.dragScale ?? 1) * s.u * Math.abs(s.u);
 
   if (p.stabilityAssist > 0) {
     const speed = Math.abs(s.u);

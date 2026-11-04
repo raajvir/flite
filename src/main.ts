@@ -11,6 +11,10 @@ import { TireEffects } from './render/effects';
 import { SnapshotInterpolator } from './render/interpolation';
 import { createWorld, followSun } from './render/scene';
 import { buildTrackMesh } from './render/trackMesh';
+import { BrakingLine } from './render/brakingLine';
+import { buildScenery, type SceneryFile } from './render/scenery';
+import monzaScenery from '../data/tracks/monza/scenery.json';
+import { RacingPlan } from './ai/aiDriver';
 import { loadCarParams, type CarFile, type ParamSetName } from './sim/params';
 import { loadTrack, surfaceTable, type TrackName } from './sim/tracks';
 import type { TrackWorld } from './sim/trackWorld';
@@ -20,6 +24,8 @@ import type { RaceSnapshot } from './game/session';
 import type { FromWorker, ToWorker } from './worker/protocol';
 
 const CAR = carFile as unknown as CarFile;
+/** Only show the slipstream meter above this speed (it's meaningless on the grid), m/s. */
+const SLIPSTREAM_HUD_MIN_SPEED = 20;
 const query = new URLSearchParams(location.search);
 const trackName: TrackName = query.get('track') === 'test' ? 'test' : 'monza';
 const aiCount = Math.max(0, Math.min(15, Number(query.get('ai') ?? 7)));
@@ -37,6 +43,11 @@ const panel = new TuningPanel({
     if (set !== paramSet) return;
     params = loadCarParams(CAR, set, overrides);
     send({ type: 'setParams', paramSet: set, overrides });
+    refreshBrakingPlan();
+  },
+  onRaceChange: (r) => {
+    send({ type: 'setAIDifficulty', difficulty: r.aiDifficulty });
+    if (brakingLine) brakingLine.visible = r.brakingLine;
   },
 });
 let params = loadCarParams(CAR, paramSet, panel.overrides(paramSet));
@@ -45,6 +56,17 @@ if (query.has('tuning')) panel.toggle();
 const world = createWorld(document.body, trackName === 'test');
 const track: TrackWorld | null = trackName === 'test' ? null : loadTrack(trackName);
 if (track) world.scene.add(buildTrackMesh(track));
+const scenery = track ? buildScenery(track, monzaScenery as unknown as SceneryFile) : null;
+if (scenery) world.scene.add(scenery.group);
+
+// Braking line: the AI's speed plan, built for the player's own car.
+const BRAKING_LINE_SKILL = 0.95; // guide slightly inside the car's limit
+const brakingLine = track ? new BrakingLine(world.scene, track) : null;
+function refreshBrakingPlan(): void {
+  if (track && brakingLine) brakingLine.setPlan(new RacingPlan(track, params, BRAKING_LINE_SKILL), params);
+}
+refreshBrakingPlan();
+if (brakingLine) brakingLine.visible = panel.race.brakingLine;
 const surfaces = surfaceTable();
 const fog = world.scene.fog;
 
@@ -141,7 +163,15 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
 };
 send({
   type: 'start',
-  options: { track: trackName, paramSet, overrides: panel.overrides(paramSet), aiCount, laps, autopilot: trackName !== 'test' && demoMode !== null },
+  options: {
+    track: trackName,
+    paramSet,
+    overrides: panel.overrides(paramSet),
+    aiCount,
+    laps,
+    autopilot: trackName !== 'test' && demoMode !== null,
+    aiDifficulty: panel.race.aiDifficulty,
+  },
 });
 
 window.addEventListener('pointerdown', () => sound.start());
@@ -157,11 +187,13 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.code === 'KeyC') cam.toggle();
   if (e.code === 'KeyV') debugView = !debugView;
+  if (e.code === 'KeyL') panel.setBrakingLine(!panel.race.brakingLine);
   if (e.code === 'KeyP') {
     paramSet = paramSet === 'feel' ? 'sim' : 'feel';
     const overrides = panel.overrides(paramSet);
     params = loadCarParams(CAR, paramSet, overrides);
     send({ type: 'setParams', paramSet, overrides });
+    refreshBrakingPlan();
     panel.render();
   }
   if (e.code === 'KeyT') {
@@ -237,6 +269,12 @@ function frame(now: number): void {
     followSun(world.sun, ps.x, ps.z);
     cam.update(dt, ps);
     sound.update(ps, ps.gear < 0 ? inputs.brake : inputs.throttle, params, surfaces);
+    brakingLine?.update(ps.x, ps.z, Math.hypot(ps.u, ps.v));
+  }
+  // Start lights: one more lights every 0.6 s through the countdown, all out at GO.
+  if (scenery && race) {
+    const c = race.countdown;
+    scenery.setStartLights(c > 0 ? Math.min(5, Math.floor((race.t / race.countdown) * 5) + 1) : 0);
   }
   const mapView = debugView && track !== null;
   world.scene.fog = mapView ? null : fog; // fog would wash out the map seen from 2 km up
@@ -261,7 +299,8 @@ function frame(now: number): void {
       raceText =
         `P${pos}/${race.order.length}   lap ${Math.min(Math.max(me.lap, 1), race.laps)}/${race.laps}${me.finished ? '  FINISHED' : ''}\n` +
         `lap    ${fmt(me.lap >= 1 ? me.lapTime : null)}\n` +
-        `last   ${fmt(me.lastLap)}   best ${fmt(me.bestLap)}\n`;
+        `last   ${fmt(me.lastLap)}   best ${fmt(me.bestLap)}\n` +
+        (me.draft > 0.05 && Math.hypot(ps.u, ps.v) > SLIPSTREAM_HUD_MIN_SPEED ? `SLIPSTREAM ${'▮'.repeat(Math.ceil(me.draft * 5)).padEnd(5, '▯')}\n` : '');
       const c = race.countdown;
       center.textContent = c > 0 ? String(Math.ceil(c)) : race.t < race.countdown + 1 ? 'GO!' : '';
     }

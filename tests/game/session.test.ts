@@ -103,3 +103,35 @@ describe('telemetry', () => {
     expect(row[TELEMETRY_COLUMNS.indexOf('FL_surface')]).toBe('asphalt');
   });
 });
+
+describe('AI difficulty', () => {
+  it('maps 0..1 to a spread of skills, best first', async () => {
+    const { skillsFor } = await import('../../src/ai/difficulty');
+    const easy = skillsFor(0, 4), hard = skillsFor(1, 4);
+    expect(hard[0]).toBeCloseTo(1, 9);
+    expect(easy[0]!).toBeLessThan(hard[0]!);
+    expect(hard[3]!).toBeLessThan(hard[0]!);
+  });
+
+  it('even at 100% difficulty the AI laps Monza without leaving the track', () => {
+    const sess = new Session(world, [{ params: feel, ai: { skill: 1.0 } }], 2, 0);
+    let worstOff = -Infinity;
+    while (sess.t < 200 && !sess.cars[0]!.race.finished) {
+      sess.step(NONE);
+      const c = sess.cars[0]!;
+      const edge = c.race.d >= 0 ? world.at(world.wl, c.race.s) : world.at(world.wr, c.race.s);
+      worstOff = Math.max(worstOff, Math.abs(c.race.d) - edge);
+    }
+    expect(sess.cars[0]!.race.lastLap).not.toBeNull();
+    expect(worstOff).toBeLessThan(1.5);
+  }, 60_000);
+
+  it('harder AI is faster', () => {
+    const lap = (skill: number) => {
+      const sess = new Session(world, [{ params: feel, ai: { skill } }], 2, 0);
+      while (sess.t < 220 && !sess.cars[0]!.race.finished) sess.step(NONE);
+      return sess.cars[0]!.race.lastLap!;
+    };
+    expect(lap(1.0)).toBeLessThan(lap(0.8) - 2);
+  }, 120_000);
+});

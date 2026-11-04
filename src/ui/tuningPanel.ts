@@ -6,6 +6,7 @@
  * - "Copy settings" puts the changed values on the clipboard as JSON, ready to
  *   be baked into data/cars/*.json as new defaults.
  */
+import { DIFFICULTY } from '../ai/difficulty';
 import { KEYBOARD_TUNING } from '../input/keyboard';
 import type { CarParams, NumberKey, ParamOverrides, ParamSetName } from '../sim/params';
 
@@ -121,10 +122,19 @@ const KEYBOARD_ITEMS: KeyboardSpec[] = [
 const STORAGE_KEY = 'flite.tuning.v1';
 const KEYBOARD_DEFAULTS = { ...KEYBOARD_TUNING };
 
+export interface RaceSettings {
+  /** 0..1 */
+  aiDifficulty: number;
+  brakingLine: boolean;
+}
+
+const RACE_DEFAULTS: RaceSettings = { aiDifficulty: DIFFICULTY.default, brakingLine: true };
+
 interface Stored {
   feel: ParamOverrides;
   sim: ParamOverrides;
   keyboard: Partial<Record<KeyboardKey, number>>;
+  race: RaceSettings;
 }
 
 function loadStored(): Stored {
@@ -132,12 +142,12 @@ function loadStored(): Stored {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = JSON.parse(raw) as Partial<Stored>;
-      return { feel: s.feel ?? {}, sim: s.sim ?? {}, keyboard: s.keyboard ?? {} };
+      return { feel: s.feel ?? {}, sim: s.sim ?? {}, keyboard: s.keyboard ?? {}, race: { ...RACE_DEFAULTS, ...s.race } };
     }
   } catch {
     // storage blocked or corrupt: start clean
   }
-  return { feel: {}, sim: {}, keyboard: {} };
+  return { feel: {}, sim: {}, keyboard: {}, race: { ...RACE_DEFAULTS } };
 }
 
 const CSS = `
@@ -170,6 +180,8 @@ export interface TuningPanelOptions {
   getDefaults: (set: ParamSetName) => CarParams;
   /** Called with the full override map whenever a car slider moves. */
   onChange: (set: ParamSetName, overrides: ParamOverrides) => void;
+  /** Called when a race setting (AI difficulty, braking line) changes. */
+  onRaceChange: (race: RaceSettings) => void;
 }
 
 export class TuningPanel {
@@ -195,6 +207,17 @@ export class TuningPanel {
 
   toggle(): void {
     this.el.classList.toggle('open');
+  }
+
+  get race(): RaceSettings {
+    return { ...this.stored.race };
+  }
+
+  setBrakingLine(on: boolean): void {
+    this.stored.race.brakingLine = on;
+    this.save();
+    this.opts.onRaceChange(this.race);
+    this.render();
   }
 
   overrides(set: ParamSetName): ParamOverrides {
@@ -226,9 +249,30 @@ export class TuningPanel {
     );
     this.el.append(h, sub, buttons, this.status);
 
+    // Race settings (both handling sets).
+    const rd = document.createElement('details');
+    rd.open = true;
+    const rs = document.createElement('summary');
+    rs.textContent = 'Race';
+    rd.append(rs);
+    const race = this.stored.race;
+    rd.append(
+      this.row('AI difficulty', 'how much of the grip the AI dares to use; applies immediately', 0, 1, 0.01, race.aiDifficulty, RACE_DEFAULTS.aiDifficulty, pct, false, (v) => {
+        race.aiDifficulty = v;
+        this.save();
+        this.opts.onRaceChange(this.race);
+      }),
+      this.row('Braking line (L)', 'green = flat out, yellow = slow down soon, red = brake now', 0, 1, 1, race.brakingLine ? 1 : 0, RACE_DEFAULTS.brakingLine ? 1 : 0, num(0), true, (v) => {
+        race.brakingLine = v > 0;
+        this.save();
+        this.opts.onRaceChange(this.race);
+      }),
+    );
+    this.el.append(rd);
+
     for (const g of GROUPS) {
       const d = document.createElement('details');
-      d.open = g.title === 'Assists' || g.title === 'Brakes';
+      d.open = g.title === 'Assists';
       const s = document.createElement('summary');
       s.textContent = g.title;
       d.append(s);
@@ -350,7 +394,7 @@ export class TuningPanel {
 
   private async copy(): Promise<void> {
     const text = JSON.stringify(
-      { feel: this.stored.feel, sim: this.stored.sim, keyboard: this.stored.keyboard },
+      { feel: this.stored.feel, sim: this.stored.sim, keyboard: this.stored.keyboard, race: this.stored.race },
       null,
       2,
     );

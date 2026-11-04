@@ -36,11 +36,18 @@ export interface WheelState {
   bump: number;
 }
 
-/** Forces from outside the car (car-to-car contact), body frame: fx forward, fy left, mz about +Y. */
+/**
+ * Effects from other cars: contact forces (body frame: fx forward, fy left, mz about +Y)
+ * and aero scaling from running in another car's wake (drafting).
+ */
 export interface ExternalForce {
   fx: number;
   fy: number;
   mz: number;
+  /** Multiplier on aero drag (< 1 in a slipstream). Default 1. */
+  dragScale?: number;
+  /** Multiplier on downforce (< 1 in dirty air). Default 1. */
+  liftScale?: number;
 }
 
 export const NO_FORCE: Readonly<ExternalForce> = { fx: 0, fy: 0, mz: 0 };

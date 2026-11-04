@@ -8,6 +8,7 @@
 import { aiDrive, initialAIState, RacingPlan, type AIState } from '../ai/aiDriver';
 import { SIM_DT } from '../sim/constants';
 import { carContacts } from '../sim/contacts';
+import { draftEffects, type DraftEffect } from '../sim/draft';
 import type { CarParams } from '../sim/params';
 import { newRaceCar, standings, updateRaceCar, type RaceCar } from '../sim/race';
 import { step } from '../sim/step';
@@ -39,11 +40,14 @@ export interface RaceSnapshot {
   countdown: number;
   laps: number;
   order: number[];
-  cars: { lap: number; lastLap: number | null; bestLap: number | null; lapTime: number; finished: boolean }[];
+  cars: { lap: number; lastLap: number | null; bestLap: number | null; lapTime: number; finished: boolean; draft: number }[];
 }
 
 export class Session {
   readonly cars: SessionCar[];
+  private readonly plans = new Map<string, RacingPlan>();
+  /** Latest slipstream effect per car (for the HUD). */
+  drafts: DraftEffect[] = [];
   private steps = 0;
   t = 0;
 
@@ -55,7 +59,6 @@ export class Session {
     /** Grid slot for each car (default: in setup order) */
     gridOrder?: number[],
   ) {
-    const plans = new Map<string, RacingPlan>();
     this.cars = setups.map((setup, i) => {
       const slot = gridOrder?.[i] ?? i;
       const s = world.wrap(-GRID_BEHIND_LINE - slot * GRID_ROW_SPACING);
@@ -63,14 +66,26 @@ export class Session {
       const pos = world.point(s, d);
       const state = initialState({ x: pos.x, y: 0, z: pos.z, yaw: world.headingAt(s) }, setup.params.idleRpm);
       let ai: SessionCar['ai'] = null;
-      if (setup.ai) {
-        const key = `${setup.ai.skill}`;
-        let plan = plans.get(key);
-        if (!plan) plans.set(key, (plan = new RacingPlan(world, setup.params, setup.ai.skill)));
-        ai = { plan, state: initialAIState() };
-      }
+      if (setup.ai) ai = { plan: this.planFor(setup.params, setup.ai.skill), state: initialAIState() };
       return { state, params: setup.params, race: newRaceCar(world, pos.x, pos.z), inputs: { ...NEUTRAL_INPUTS }, ai };
     });
+  }
+
+  private planFor(p: CarParams, skill: number): RacingPlan {
+    const key = `${skill.toFixed(4)}`;
+    let plan = this.plans.get(key);
+    if (!plan) this.plans.set(key, (plan = new RacingPlan(this.world, p, skill)));
+    return plan;
+  }
+
+  /** Change AI skills mid-session (one value per AI car, in car order). */
+  setAISkills(skills: number[]): void {
+    let k = 0;
+    for (const c of this.cars) {
+      if (!c.ai) continue;
+      const skill = skills[k++];
+      if (skill !== undefined) c.ai.plan = this.planFor(c.params, skill);
+    }
   }
 
   get started(): boolean {
@@ -105,9 +120,14 @@ export class Session {
       cars.map((c) => c.params),
       this.world.surfaces.contact,
     );
+    this.drafts = draftEffects(
+      cars.map((c) => c.state),
+      cars.map((c) => c.params),
+    );
     for (let i = 0; i < cars.length; i++) {
       const c = cars[i]!;
-      c.state = step(c.state, c.inputs, c.params, dt, this.world, ext[i]);
+      const d = this.drafts[i]!;
+      c.state = step(c.state, c.inputs, c.params, dt, this.world, { ...ext[i]!, dragScale: d.dragScale, liftScale: d.liftScale });
     }
     this.steps++;
     this.t += dt;
@@ -137,12 +157,13 @@ export class Session {
       countdown: Math.max(0, this.countdown - this.t),
       laps: this.laps,
       order: standings(this.cars.map((c) => c.race)),
-      cars: this.cars.map((c) => ({
+      cars: this.cars.map((c, i) => ({
         lap: c.race.lap,
         lastLap: c.race.lastLap,
         bestLap: c.race.bestLap,
         lapTime: c.race.lap >= 1 ? this.t - c.race.lapStart : 0,
         finished: c.race.finished,
+        draft: this.drafts[i]?.strength ?? 0,
       })),
     };
   }
