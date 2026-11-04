@@ -14,13 +14,23 @@
  *
  * Pure: no globals, no randomness. Same inputs -> bit-identical output.
  */
+import surfacesFile from '../../data/surfaces.json';
 import { AIR_DENSITY, GRAVITY } from './constants';
 import type { CarParams } from './params';
 import { chooseGear, engineTorque, splitDiff, totalRatio, wheelRpm } from './powertrain';
+import { bumpNoise, loadSurfaces, type SurfacesFile } from './surfaces';
 import { tireForce } from './tire';
-import type { CarState, DriverInputs, WheelState } from './types';
+import { NO_FORCE, type CarState, type DriverInputs, type ExternalForce, type WheelState } from './types';
+import { FlatWorld, type GroundQuery, type World } from './world';
+
+/** Flat asphalt everywhere: the default world (test area, unit tests). */
+export const FLAT_ASPHALT: World = new FlatWorld(loadSurfaces(surfacesFile as unknown as SurfacesFile));
 
 const TWO_PI = Math.PI * 2;
+/** Surface bumps can swing a wheel's load by at most this fraction either way. */
+const BUMP_MAX_LOAD_SWING = 0.9;
+/** Below this sliding speed along a wall, friction is scaled down linearly (avoids jitter), m/s. */
+const WALL_SLIP_SPEED = 0.5;
 /** Finite-difference step for the tire's longitudinal stiffness. */
 const KAPPA_EPS = 1e-4;
 const clamp = (x: number, lo: number, hi: number): number => (x < lo ? lo : x > hi ? hi : x);
@@ -67,7 +77,14 @@ export function steerLock(p: CarParams, u: number): number {
   return p.maxSteerAngle / (1 + r * r);
 }
 
-export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number): CarState {
+export function step(
+  s: CarState,
+  inputs: DriverInputs,
+  p: CarParams,
+  dt: number,
+  world: World = FLAT_ASPHALT,
+  ext: ExternalForce = NO_FORCE,
+): CarState {
   const steerIn = clamp(inputs.steer, -1, 1);
   const throttleIn = clamp(inputs.throttle, 0, 1);
   const brakeIn = clamp(inputs.brake, 0, 1);
@@ -120,8 +137,28 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
   }
   const [driveL, driveR] = splitDiff(p, axleTorque, wRL.omega, wRR.omega);
 
-  // --- 3. Loads.
+  // --- 3. What's under each wheel, and the loads (incl. surface bumps).
+  const contact = world.surfaces.contact;
+  const sinY0 = Math.sin(s.yaw), cosY0 = Math.cos(s.yaw);
+  const fwdX = -sinY0, fwdZ = -cosY0; // body forward in world
+  const leftX = -cosY0, leftZ = sinY0; // body left in world
+  const geom = [0, 1, 2, 3].map((i) => ({
+    xi: isFront(i) ? a : -b,
+    yi: (isLeft(i) ? 0.5 : -0.5) * (isFront(i) ? p.trackFront : p.trackRear),
+  }));
+  const ground: GroundQuery[] = geom.map(({ xi, yi }) =>
+    world.query(s.x + xi * fwdX + yi * leftX, s.z + xi * fwdZ + yi * leftZ),
+  );
   const loads = wheelLoads(p, s.u, s.axFiltered, s.ayFiltered);
+  const bumpFade = Math.min(1, Math.abs(s.u) / contact.bumpFullSpeed);
+  const bumps = ground.map((g, i) => {
+    const { xi, yi } = geom[i]!;
+    const wx = s.x + xi * fwdX + yi * leftX, wz = s.z + xi * fwdZ + yi * leftZ;
+    return g.surface.bumpAmplitude * bumpNoise(wx, wz, g.surface.bumpWavelength);
+  });
+  for (let i = 0; i < 4; i++) {
+    loads[i] = loads[i]! * (1 + clamp(contact.bumpLoadGain * bumps[i]! * bumpFade, -BUMP_MAX_LOAD_SWING, BUMP_MAX_LOAD_SWING));
+  }
 
   // --- 4 & 5. Tires and wheel spin.
   const cosD = Math.cos(steerAngle);
@@ -134,8 +171,9 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
   for (let i = 0; i < 4; i++) {
     const w = s.wheels[i]!;
     const front = isFront(i);
-    const xi = front ? a : -b;
-    const yi = (isLeft(i) ? 0.5 : -0.5) * (front ? p.trackFront : p.trackRear);
+    const { xi, yi } = geom[i]!;
+    const g = ground[i]!;
+    const surf = g.surface;
     const c = front ? cosD : 1;
     const sn = front ? sinD : 0;
     const Fz = loads[i]!;
@@ -159,7 +197,7 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
     const decay = sigma > 0 ? Math.exp((-denom / sigma) * dt) : 0;
     const tanAlpha = alphaSS + (w.tanAlpha - alphaSS) * decay;
 
-    const grip = 1; // surface grip arrives in M3
+    const grip = surf.grip;
     const f = tireForce(kappa, tanAlpha, Fz, tire, grip);
 
     // Back to body frame.
@@ -187,14 +225,45 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
     if (p.absEnabled > 0 && -kappa * Math.sign(vxw) > p.absSlip) {
       brakeT *= clamp(1 - (-kappa * Math.sign(vxw) - p.absSlip) / p.absSlip, 0, 1);
     }
-    const frictionT = brakeT + p.rollingResistance * Fz * R;
+    const frictionT = brakeT + (p.rollingResistance + surf.rollingResistance) * Fz * R;
     const dOmega = (frictionT / effInertia) * dt;
     omega = Math.abs(omega) <= dOmega ? 0 : omega - Math.sign(omega) * dOmega;
 
+    // Surface drag (gravel sinking the car): opposes the contact patch's motion, grows with speed.
+    if (surf.drag > 0) {
+      const k = (surf.drag * Fz) / GRAVITY;
+      sumFx -= k * vxb;
+      sumFy -= k * vyb;
+      sumMz -= xi * k * vyb - yi * k * vxb;
+    }
+
+    // Wall contact at the wheel: spring-damper push back towards the track + sliding friction.
+    if (g.wallDepth > 0) {
+      const pvx = vxb * fwdX + vyb * leftX; // contact point velocity, world
+      const pvz = vxb * fwdZ + vyb * leftZ;
+      const vn = pvx * g.wallNx + pvz * g.wallNz; // > 0 = moving further into the wall
+      const N = Math.max(0, contact.wallStiffness * g.wallDepth + contact.wallDamping * vn);
+      const tx = pvx - vn * g.wallNx, tz = pvz - vn * g.wallNz;
+      const vt = Math.hypot(tx, tz);
+      const fr = vt > WALL_SLIP_SPEED ? (contact.wallFriction * N) / vt : (contact.wallFriction * N) / WALL_SLIP_SPEED;
+      const Fwx = -N * g.wallNx - fr * tx;
+      const Fwz = -N * g.wallNz - fr * tz;
+      const fbx = Fwx * fwdX + Fwz * fwdZ;
+      const fby = Fwx * leftX + Fwz * leftZ;
+      sumFx += fbx;
+      sumFy += fby;
+      sumMz += xi * fby - yi * fbx;
+    }
+
     let spin = (w.spin + omega * dt) % TWO_PI;
     if (spin < 0) spin += TWO_PI;
-    wheels.push({ omega, spin, kappa, tanAlpha, load: Fz, fx: f.fx, fy: f.fy });
+    wheels.push({ omega, spin, kappa, tanAlpha, load: Fz, fx: f.fx, fy: f.fy, surface: surf.id, bump: bumps[i]! });
   }
+
+  // Outside forces (car-to-car contact).
+  sumFx += ext.fx;
+  sumFy += ext.fy;
+  sumMz += ext.mz;
 
   // --- 6. Aero drag + stability assist.
   sumFx -= 0.5 * AIR_DENSITY * p.dragArea * s.u * Math.abs(s.u);
@@ -215,8 +284,19 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
   // --- 7. Integrate chassis (velocities first, then positions with the new velocities).
   const ax = sumFx / p.mass;
   const ay = sumFy / p.mass;
-  const u = s.u + (ax + s.v * s.yawRate) * dt;
-  const v = s.v + (ay - s.u * s.yawRate) * dt;
+  // Gravity on a slope/camber pulls the car downhill (not felt as load transfer, so kept separate).
+  let gX = 0, gZ = 0, height = 0;
+  for (const g of ground) {
+    gX += g.gradX / 4;
+    gZ += g.gradZ / 4;
+    height += g.height / 4;
+  }
+  const slopeF = gX * fwdX + gZ * fwdZ;
+  const slopeL = gX * leftX + gZ * leftZ;
+  const axGravity = -GRAVITY * slopeF;
+  const ayGravity = -GRAVITY * slopeL;
+  const u = s.u + (ax + axGravity + s.v * s.yawRate) * dt;
+  const v = s.v + (ay + ayGravity - s.u * s.yawRate) * dt;
   const yawRate = s.yawRate + (sumMz / p.yawInertia) * dt;
   const yaw = s.yaw + yawRate * dt;
 
@@ -232,7 +312,7 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
   return {
     t: s.t + dt,
     x,
-    y: s.y,
+    y: height,
     z,
     yaw,
     u,
@@ -246,6 +326,8 @@ export function step(s: CarState, inputs: DriverInputs, p: CarParams, dt: number
     axFiltered: s.axFiltered + (ax - s.axFiltered) * lag,
     ayFiltered: s.ayFiltered + (ay - s.ayFiltered) * lag,
     ...body,
+    slopeF,
+    slopeL,
     wheels: wheels as CarState['wheels'],
   };
 }

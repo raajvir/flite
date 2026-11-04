@@ -71,6 +71,8 @@ function lerpWheel(a: WheelState, b: WheelState, k: number): WheelState {
     load: l(a.load, b.load, k),
     fx: l(a.fx, b.fx, k),
     fy: l(a.fy, b.fy, k),
+    surface: b.surface,
+    bump: l(a.bump, b.bump, k),
   };
 }
 
@@ -92,6 +94,8 @@ function lerpState(a: CarState, b: CarState, k: number): CarState {
     ayFiltered: l(a.ayFiltered, b.ayFiltered, k),
     pitch: l(a.pitch, b.pitch, k),
     roll: l(a.roll, b.roll, k),
+    slopeF: l(a.slopeF, b.slopeF, k),
+    slopeL: l(a.slopeL, b.slopeL, k),
     wheels: [0, 1, 2, 3].map((i) => lerpWheel(a.wheels[i]!, b.wheels[i]!, k)) as CarState['wheels'],
   };
 }

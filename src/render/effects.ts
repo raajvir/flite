@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import type { CarParams } from '../sim/params';
+import type { SurfaceTable } from '../sim/surfaces';
 import type { CarState } from '../sim/types';
 import { slideIntensity } from './slide';
 
@@ -24,6 +25,14 @@ export const EFFECTS_TUNING = {
   smokeCarryFraction: 0.15, // share of car velocity the puff keeps
   smokeColor: 0xf3f3f3,
   smokeOpacity: 0.55,
+  /** Loose surfaces throw up particles from the rear wheels once moving faster than this, m/s */
+  looseMinSpeed: 6,
+  looseRate: 30, // puffs per second per wheel at looseFullSpeed
+  looseFullSpeed: 40, // m/s
+  dustColor: 0xe6d6b0,
+  grassColor: 0x8fd47a,
+  /** Skid marks only on surfaces at least this grippy (not on gravel/grass) */
+  markMinGrip: 0.8,
 };
 
 interface Puff {
@@ -56,7 +65,15 @@ export class TireEffects {
   private readonly s3 = new THREE.Vector3();
   private readonly up = new THREE.Vector3(0, 1, 0);
 
-  constructor(scene: THREE.Scene, p: CarParams) {
+  private readonly white = new THREE.Color(EFFECTS_TUNING.smokeColor);
+  private readonly dust = new THREE.Color(EFFECTS_TUNING.dustColor);
+  private readonly grass = new THREE.Color(EFFECTS_TUNING.grassColor);
+
+  constructor(
+    scene: THREE.Scene,
+    p: CarParams,
+    private readonly surfaces: SurfaceTable,
+  ) {
     const a = p.derived.a, b = p.derived.b;
     this.wheelLocal = [
       [-p.trackFront / 2, -a],
@@ -88,13 +105,14 @@ export class TireEffects {
 
     this.smoke = new THREE.InstancedMesh(
       new THREE.IcosahedronGeometry(1, 0),
-      new THREE.MeshLambertMaterial({ color: this.t.smokeColor, flatShading: true, transparent: true, opacity: this.t.smokeOpacity, depthWrite: false }),
+      new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, transparent: true, opacity: this.t.smokeOpacity, depthWrite: false }),
       this.t.smokePuffs,
     );
     this.smoke.frustumCulled = false;
     for (let i = 0; i < this.t.smokePuffs; i++) {
       this.puffs.push({ x: 0, y: 0, z: 0, vx: 0, vz: 0, age: 1, life: 0, rot: 0 });
       this.smoke.setMatrixAt(i, this.m4.makeScale(0, 0, 0));
+      this.smoke.setColorAt(i, this.white);
     }
     scene.add(this.smoke);
   }
@@ -121,9 +139,13 @@ export class TireEffects {
       // three's rotation.y = yaw: x' = x cos + z sin, z' = -x sin + z cos
       const wx = s.x + lx * cos + lz * sin;
       const wz = s.z - lx * sin + lz * cos;
-      const k = slideIntensity(s, i, p);
+      const surf = this.surfaces.list[s.wheels[i]!.surface];
+      const loose = surf?.particles === 'dust' || surf?.particles === 'grass';
+      const speed = Math.hypot(s.u, s.v);
+      const k = loose ? 0 : slideIntensity(s, i, p);
+      const hard = (surf?.grip ?? 1) >= this.t.markMinGrip;
 
-      if (k > 0) {
+      if (k > 0 && hard) {
         const last = this.lastPoint[i];
         if (!last) this.lastPoint[i] = { x: wx, z: wz };
         else if (Math.hypot(wx - last.x, wz - last.z) >= this.t.markMinStep) {
@@ -131,14 +153,28 @@ export class TireEffects {
           this.lastPoint[i] = { x: wx, z: wz };
           marksChanged = true;
         }
-        // Smoke from the rear tires only (front smoke looked wrong); all four leave marks.
-        if (i >= 2) this.spawnAcc[i]! += k * this.t.smokeRate * dt;
-        while (this.spawnAcc[i]! >= 1) {
-          this.spawnAcc[i]! -= 1;
-          this.spawn(wx, wz, vwx, vwz);
-        }
       } else {
         this.lastPoint[i] = null;
+      }
+
+      // Particles from the rear tires only: tire smoke when sliding, dust/grass on loose surfaces.
+      let rate = 0;
+      let color = this.white;
+      if (i >= 2) {
+        if (loose && speed > this.t.looseMinSpeed) {
+          rate = this.t.looseRate * Math.min(1, speed / this.t.looseFullSpeed);
+          color = surf!.particles === 'dust' ? this.dust : this.grass;
+        } else if (k > 0) {
+          rate = k * this.t.smokeRate;
+        }
+      }
+      if (rate > 0) {
+        this.spawnAcc[i]! += rate * dt;
+        while (this.spawnAcc[i]! >= 1) {
+          this.spawnAcc[i]! -= 1;
+          this.spawn(wx, wz, vwx, vwz, color);
+        }
+      } else {
         this.spawnAcc[i] = 0;
       }
     }
@@ -166,8 +202,11 @@ export class TireEffects {
     this.markCount++;
   }
 
-  private spawn(x: number, z: number, vx: number, vz: number): void {
-    const puff = this.puffs[this.puffNext]!;
+  private spawn(x: number, z: number, vx: number, vz: number, color: THREE.Color): void {
+    const idx = this.puffNext;
+    const puff = this.puffs[idx]!;
+    this.smoke.setColorAt(idx, color);
+    if (this.smoke.instanceColor) this.smoke.instanceColor.needsUpdate = true;
     this.puffNext = (this.puffNext + 1) % this.puffs.length;
     const c = this.t.smokeCarryFraction;
     puff.x = x + (Math.random() - 0.5) * 0.3;

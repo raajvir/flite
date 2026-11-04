@@ -1,5 +1,5 @@
 /**
- * Telemetry CSV formatting (pure). Per-wheel surface type arrives in M3.
+ * Telemetry CSV formatting (pure).
  */
 import { WHEEL_NAMES, type CarState, type DriverInputs } from './types';
 
@@ -22,12 +22,16 @@ export const TELEMETRY_COLUMNS: readonly string[] = [
   'body_pitch_rad',
   'body_roll_rad',
   ...WHEEL_NAMES.flatMap((w) => PER_WHEEL.map((c) => `${w}_${c}`)),
+  ...WHEEL_NAMES.map((w) => `${w}_surface`),
   'x_m',
   'z_m',
   'yaw_rad',
 ];
 
-export function telemetryRow(s: CarState, i: DriverInputs): number[] {
+export type TelemetryValue = number | string;
+
+/** @param surfaceNames surface name for each surface id (from the surface table) */
+export function telemetryRow(s: CarState, i: DriverInputs, surfaceNames: readonly string[] = []): TelemetryValue[] {
   return [
     s.t,
     s.distance,
@@ -45,14 +49,15 @@ export function telemetryRow(s: CarState, i: DriverInputs): number[] {
     s.pitch,
     s.roll,
     ...s.wheels.flatMap((w) => [w.load, w.kappa, Math.atan(w.tanAlpha), w.omega]),
+    ...s.wheels.map((w) => surfaceNames[w.surface] ?? String(w.surface)),
     s.x,
     s.z,
     s.yaw,
   ];
 }
 
-export function telemetryToCSV(rows: readonly number[][]): string {
+export function telemetryToCSV(rows: readonly TelemetryValue[][]): string {
   const lines = [TELEMETRY_COLUMNS.join(',')];
-  for (const r of rows) lines.push(r.map((v) => Number(v.toFixed(6))).join(','));
+  for (const r of rows) lines.push(r.map((v) => (typeof v === 'number' ? Number(v.toFixed(6)) : v)).join(','));
   return lines.join('\n') + '\n';
 }

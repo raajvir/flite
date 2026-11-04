@@ -40,7 +40,17 @@ Right-handed, **+Y up** (same as Three.js, so no conversion is needed when rende
 Keyboard, gamepad, replays and the future AI driver all produce exactly this struct.
 Nothing else can move the car.
 
-## Current model (M1)
+## Current model
 
-Kinematic bicycle (no tires). This placeholder lets us build the pipeline. M2 replaces it with a
-four-wheel chassis, weight transfer and Pacejka tires, and keeps the same function signature.
+Planar four-wheel chassis with Pacejka tires (combined slip), quasi-static weight transfer,
+engine/gearbox/diff, aero, assists, and spring-damper body pitch/roll.
+
+`step(state, inputs, params, dt, world?, ext?)`:
+- `world` (`World` interface) answers "what is under this point?": surface, ground height and
+  slope (camber), and wall depth. `FlatWorld` = test area, `TrackWorld` = real circuits.
+  Every wheel is queried separately each step, so one wheel on a kerb differs from four.
+- `ext` = outside forces (car-to-car contact from `contacts.ts`), body frame.
+
+Track coordinates (`TrackWorld`): `s` = distance along the centreline from the start line,
+`d` = lateral offset, positive to the LEFT of the driving direction. Banking is positive when
+the left edge is higher.

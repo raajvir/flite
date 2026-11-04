@@ -10,14 +10,19 @@ npm install        # first time only
 npm run dev        # then open http://localhost:5173
 ```
 
+By default you race 7 AI cars on the Italian circuit (3 laps, you start last).
+
 URL options:
-- `?demo` — an autopilot drives laps of the test area (no keyboard needed)
+- `?track=test` — the flat cone test area instead of the circuit
+- `?ai=3` — number of AI opponents (0–15), `?laps=5` — race length
+- `?view=map` — start in the top-down surface map (V toggles it)
+- `?demo` — autopilot: the AI drives your car (on the test area: scripted laps)
 - `?demo=donut` — full lock + full throttle: smoke and skid marks
 - `?tuning` — open the tuning panel on load
 - `?set=sim` — use the `sim` handling set instead of `feel`
 
 Controls: ↑/W throttle · ↓/S/Space brake (hold when stopped = reverse) · ←→/AD steer ·
-R reset · C chase/cockpit camera · P switch feel/sim handling · O tuning panel · M mute ·
+R back on track · Shift+R restart race · V map view · C chase/cockpit camera · P switch feel/sim handling · O tuning panel · M mute ·
 T start/stop telemetry recording (saves a CSV).
 Gamepad: left stick steer, right trigger throttle, left trigger brake (touch it to take over).
 
@@ -29,7 +34,19 @@ Tip: full lock + full throttle from a standstill (feel set) = donut.
 npm test           # physics + determinism tests (Vitest)
 npm run typecheck  # TypeScript strict
 npm run build      # production build into dist/
+tools/.venv/bin/python -m pytest tools/tests   # track builder tests
 ```
+
+## Tracks
+
+```bash
+python3 -m venv tools/.venv && tools/.venv/bin/pip install numpy scipy pandas matplotlib shapely pytest  # once
+tools/.venv/bin/python tools/track_builder.py monza   # raw CSV -> data/tracks/monza/track.json
+tools/.venv/bin/python tools/plot_surfaces.py monza   # -> data/tracks/monza/surface_map.png
+```
+
+Each track folder has `raw/` (source data + license), `meta.json` (name, official length, camber),
+`surfaces.json` (kerb/gravel/grass bands) and the built `track.json`.
 
 ## Layout
 
@@ -39,7 +56,10 @@ See `src/sim/README.md` for units and the coordinate system.
 src/sim/     vehicle physics (pure, deterministic, SI units)
 src/worker/  runs the sim at a fixed 1000 Hz in a Web Worker
 src/render/  Three.js scene, cameras, interpolation
-src/input/   keyboard (and demo driver; gamepad later)
+src/input/   keyboard, gamepad, demo driver
+src/ai/      AI racing driver (same inputs as the player)
+src/game/    race session: cars, contacts, laps, positions
+tools/       Python track builder + surface map plotter
 data/cars/   car parameters, "feel" and "sim" sets, every value tagged with its source
 docs/demos/  screenshots from each milestone
 ```
@@ -48,8 +68,9 @@ docs/demos/  screenshots from each milestone
 
 - [x] M1 skeleton — box car, chase camera, 1000 Hz sim worker
 - [x] M2 car model + feel tuning (+ live tuning panel, press O)
-- [ ] M3 surface system
-- [ ] M4 first circuit (Italian circuit)
+- [x] M3 surface system (per-wheel grip, drag, bumps; dust, rumble; test patches not built)
+- [~] M4 first circuit (Italian circuit): drivable, kerbs/gravel/camber, map view; surface layout still to check against satellite imagery
+- [~] AI racers (pulled forward): racing-line AI, overtaking, contacts, grid, laps, positions
 - [ ] M5 game loop
 - [ ] M6 validation
 - [ ] M7 more circuits

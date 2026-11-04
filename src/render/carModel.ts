@@ -124,7 +124,7 @@ function bar(from: THREE.Vector3, to: THREE.Vector3, thickness: number, color: n
   return m;
 }
 
-export function createCarModel(geo: CarGeometryInput): CarModel {
+export function createCarModel(geo: CarGeometryInput, bodyColor: number = CAR_COLORS.body): CarModel {
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
@@ -132,7 +132,7 @@ export function createCarModel(geo: CarGeometryInput): CarModel {
   const zf = -geo.a; // front axle z (forward = -Z)
   const zr = geo.b; // rear axle z
   const R = geo.wheelRadius;
-  const C = CAR_COLORS;
+  const C = { ...CAR_COLORS, body: bodyColor };
 
   // --- Main body: long sloping nose -> cockpit -> engine cover -> tail.
   body.add(

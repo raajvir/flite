@@ -6,6 +6,7 @@
  * Browsers only allow audio after a user gesture, so call start() from a key/click handler.
  */
 import type { CarParams } from '../sim/params';
+import type { SurfaceTable } from '../sim/surfaces';
 import type { CarState } from '../sim/types';
 import { slideIntensity } from '../render/slide';
 
@@ -19,6 +20,14 @@ export const SOUND_TUNING = {
   skidMaxGain: 0.14,
   skidBandHz: 1100,
   smoothing: 0.04, // s, time constant for volume/pitch changes
+  // Surface noise (rumble = kerbs/grass, thump = sausage kerbs, crunch = gravel, hiss = astroturf)
+  rumbleHz: 140,
+  rumbleGain: 0.22,
+  thumpGain: 0.4,
+  crunchHz: 2600,
+  crunchGain: 0.12,
+  hissGain: 0.04,
+  surfaceFullSpeed: 30, // m/s for full surface-noise volume
 };
 
 export class CarSound {
@@ -29,6 +38,8 @@ export class CarSound {
   private whineGain!: GainNode;
   private skidGain!: GainNode;
   private skidFilter!: BiquadFilterNode;
+  private rumbleGain!: GainNode;
+  private crunchGain!: GainNode;
   muted = false;
 
   start(): void {
@@ -76,6 +87,23 @@ export class CarSound {
     this.skidGain.gain.value = 0;
     src.connect(this.skidFilter).connect(this.skidGain).connect(this.master);
     src.start();
+
+    // Surface noise: same noise buffer, a low-passed rumble and a high-passed crunch.
+    const mk = (type: BiquadFilterType, hz: number) => {
+      const s2 = ctx.createBufferSource();
+      s2.buffer = noise;
+      s2.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = hz;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      s2.connect(f).connect(g).connect(this.master);
+      s2.start();
+      return g;
+    };
+    this.rumbleGain = mk('lowpass', t.rumbleHz);
+    this.crunchGain = mk('highpass', t.crunchHz);
   }
 
   toggleMute(): void {
@@ -83,7 +111,7 @@ export class CarSound {
     if (this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : SOUND_TUNING.masterVolume, this.ctx.currentTime, 0.02);
   }
 
-  update(s: CarState, throttle: number, p: CarParams): void {
+  update(s: CarState, throttle: number, p: CarParams, surfaces?: SurfaceTable): void {
     const ctx = this.ctx;
     if (!ctx) return;
     const t = SOUND_TUNING;
@@ -99,6 +127,19 @@ export class CarSound {
     let skid = 0;
     for (let i = 0; i < 4; i++) skid = Math.max(skid, slideIntensity(s, i, p));
     this.skidGain.gain.setTargetAtTime(skid * t.skidMaxGain, now, t.smoothing);
+
+    // Loudest surface under any wheel.
+    let rumble = 0, crunch = 0;
+    for (const w of s.wheels) {
+      const snd = surfaces?.list[w.surface]?.sound;
+      if (snd === 'rumble') rumble = Math.max(rumble, t.rumbleGain);
+      else if (snd === 'thump') rumble = Math.max(rumble, t.thumpGain);
+      else if (snd === 'crunch') crunch = Math.max(crunch, t.crunchGain);
+      else if (snd === 'hiss') crunch = Math.max(crunch, t.hissGain);
+    }
+    const sp = Math.min(1, speed / t.surfaceFullSpeed);
+    this.rumbleGain.gain.setTargetAtTime(rumble * sp, now, t.smoothing);
+    this.crunchGain.gain.setTargetAtTime(crunch * sp, now, t.smoothing);
     this.skidFilter.frequency.setTargetAtTime(t.skidBandHz + speed * 4, now, t.smoothing);
   }
 }

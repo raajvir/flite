@@ -1,0 +1,146 @@
+{
+  "description": "Surface types. grip multiplies tire friction; rollingResistance adds to the car's rolling coefficient; bump = height noise (amplitude m, wavelength m) that shakes wheel loads; drag = speed-proportional deceleration per unit load (1/s), what makes gravel 'sink' the car. All values are gameplay estimates.",
+  "source": "estimate",
+  "surfaces": {
+    "asphalt": {
+      "grip": 1.0,
+      "rollingResistance": 0.0,
+      "bump": {
+        "amplitude": 0.0,
+        "wavelength": 1.0
+      },
+      "drag": 0.0,
+      "color": "#6c7077",
+      "sound": "none",
+      "particles": "none"
+    },
+    "paint": {
+      "grip": 0.88,
+      "rollingResistance": 0.0,
+      "bump": {
+        "amplitude": 0.0,
+        "wavelength": 1.0
+      },
+      "drag": 0.0,
+      "color": "#f4f4f4",
+      "sound": "none",
+      "particles": "none"
+    },
+    "kerb_flat": {
+      "grip": 0.9,
+      "rollingResistance": 0.002,
+      "bump": {
+        "amplitude": 0.006,
+        "wavelength": 1.0
+      },
+      "drag": 0.0,
+      "color": "#d8352a",
+      "colorAlt": "#ffffff",
+      "stripe": 1.5,
+      "sound": "rumble",
+      "particles": "none"
+    },
+    "kerb_sausage": {
+      "grip": 0.7,
+      "rollingResistance": 0.01,
+      "bump": {
+        "amplitude": 0.05,
+        "wavelength": 0.8
+      },
+      "drag": 0.02,
+      "color": "#f2c418",
+      "colorAlt": "#1e2024",
+      "stripe": 1.0,
+      "height": 0.12,
+      "sound": "thump",
+      "particles": "none"
+    },
+    "astroturf": {
+      "grip": 0.62,
+      "rollingResistance": 0.01,
+      "bump": {
+        "amplitude": 0.004,
+        "wavelength": 2.0
+      },
+      "drag": 0.0,
+      "color": "#2f8f3e",
+      "sound": "hiss",
+      "particles": "none"
+    },
+    "grass": {
+      "grip": 0.45,
+      "rollingResistance": 0.03,
+      "bump": {
+        "amplitude": 0.015,
+        "wavelength": 3.0
+      },
+      "drag": 0.04,
+      "color": "#7cc46a",
+      "sound": "rumble",
+      "particles": "grass"
+    },
+    "gravel": {
+      "grip": 0.35,
+      "rollingResistance": 0.08,
+      "bump": {
+        "amplitude": 0.02,
+        "wavelength": 0.6
+      },
+      "drag": 0.35,
+      "color": "#d9c49a",
+      "sound": "crunch",
+      "particles": "dust"
+    },
+    "runoff": {
+      "grip": 0.95,
+      "rollingResistance": 0.0,
+      "bump": {
+        "amplitude": 0.0,
+        "wavelength": 1.0
+      },
+      "drag": 0.0,
+      "color": "#8a8f96",
+      "sound": "none",
+      "particles": "none"
+    },
+    "pitlane": {
+      "grip": 1.0,
+      "rollingResistance": 0.0,
+      "bump": {
+        "amplitude": 0.0,
+        "wavelength": 1.0
+      },
+      "drag": 0.0,
+      "color": "#5e6168",
+      "sound": "none",
+      "particles": "none"
+    },
+    "wall": {
+      "grip": 0.0,
+      "rollingResistance": 0.0,
+      "bump": {
+        "amplitude": 0.0,
+        "wavelength": 1.0
+      },
+      "drag": 0.0,
+      "color": "#e8e8e8",
+      "colorAlt": "#9aa3ad",
+      "stripe": 4.0,
+      "height": 1.0,
+      "sound": "none",
+      "particles": "none"
+    }
+  },
+  "contact": {
+    "description": "Collision and bump constants (spring-damper contacts, estimates tuned for 1000 Hz)",
+    "source": "estimate",
+    "wallStiffness": 15000000.0,
+    "wallDamping": 110000.0,
+    "wallFriction": 0.4,
+    "carStiffness": 4000000.0,
+    "carDamping": 40000.0,
+    "carFriction": 0.25,
+    "bumpLoadGain": 18,
+    "bumpFullSpeed": 5
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "display_name": "Italian circuit",
+  "official_length_m": 5793,
+  "start_s_m": 0,
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher, i.e. banked into a right-hand corner.",
+  "banking": [
+    {
+      "note": "Curva Grande",
+      "s_start": 1300,
+      "s_end": 1650,
+      "angle_deg": 3.0,
+      "ramp_m": 60
+    },
+    {
+      "note": "First Lesmo",
+      "s_start": 2480,
+      "s_end": 2630,
+      "angle_deg": 3.0,
+      "ramp_m": 40
+    },
+    {
+      "note": "Second Lesmo",
+      "s_start": 2850,
+      "s_end": 2915,
+      "angle_deg": 3.0,
+      "ramp_m": 30
+    },
+    {
+      "note": "Third chicane right-hander",
+      "s_start": 3990,
+      "s_end": 4110,
+      "angle_deg": 2.0,
+      "ramp_m": 30
+    },
+    {
+      "note": "Last corner",
+      "s_start": 5110,
+      "s_end": 5490,
+      "angle_deg": 4.0,
+      "ramp_m": 60
+    }
+  ]
+}

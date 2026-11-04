@@ -1,0 +1,199 @@
+/**
+ * AI racing driver. Produces DriverInputs (steer/throttle/brake) exactly like a
+ * player, from the car's state and the track — no special physics.
+ *
+ * 1. Racing line: the track's race_d offset (from the TUMFTM raceline).
+ * 2. Speed plan (built once): max cornering speed from line curvature, tire grip
+ *    and downforce, then a backward pass for braking zones and a forward pass for
+ *    acceleration. `skill` scales how much grip the AI dares to use.
+ * 3. Driving: pure-pursuit steering towards a point ahead on the line; throttle/brake
+ *    from speed error.
+ * 4. Racecraft: swing out to pass a slower car ahead, back off if about to hit it.
+ *
+ * Pure and deterministic (state in, inputs + new AI state out).
+ */
+import { AIR_DENSITY, GRAVITY } from '../sim/constants';
+import type { CarParams } from '../sim/params';
+import type { RaceCar } from '../sim/race';
+import { steerLock } from '../sim/step';
+import type { TrackWorld } from '../sim/trackWorld';
+import type { CarState, DriverInputs } from '../sim/types';
+
+export const AI_TUNING = {
+  lookaheadBase: 7, // m
+  lookaheadPerSpeed: 0.32, // s
+  speedLookahead: 0.6, // s: plan speed this far ahead
+  maxSpeed: 100, // m/s cap on the plan
+  accelPower: 560_000, // W the plan assumes for acceleration
+  accelTractionLimit: 11, // m/s^2
+  brakeFraction: 0.82, // share of the grip-limited braking the plan uses (before skill)
+  throttleGain: 0.35,
+  brakeGain: 0.22,
+  overtakeLookahead: 35, // m along the track
+  overtakeLateral: 3.3, // m beside the car being passed
+  carWidthClearance: 2.4, // m: lateral gap that counts as "side by side"
+  followGap: 9, // m: closer than this behind a car we can't pass -> match its speed
+  offsetRate: 2.0, // m/s: how fast the AI moves across the track
+  edgeMargin: 1.3, // m from the track edge
+  stuckSpeed: 2, // m/s
+  stuckTime: 4, // s before asking to be reset onto the track
+};
+
+export interface AIProfile {
+  /** 0.8 .. 1.0: share of available grip used in the speed plan */
+  skill: number;
+}
+
+export interface AIState {
+  /** Extra lateral offset on top of the racing line (for passing), m */
+  offset: number;
+  stuckFor: number;
+}
+
+export const initialAIState = (): AIState => ({ offset: 0, stuckFor: 0 });
+
+/** Precomputed racing line + speed plan for one car type and skill. */
+export class RacingPlan {
+  readonly vmax: Float64Array;
+  readonly n: number;
+  readonly ds: number;
+
+  constructor(
+    readonly world: TrackWorld,
+    p: CarParams,
+    skill: number,
+  ) {
+    const t = AI_TUNING;
+    const n = world.n;
+    this.n = n;
+    this.ds = world.length / n;
+    const px = new Float64Array(n), pz = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const pt = world.point(world.s[i]!, world.raceD[i]!);
+      px[i] = pt.x;
+      pz[i] = pt.z;
+    }
+    // Curvature of the line (Menger curvature over +-k samples), lightly smoothed.
+    const k = 3;
+    const kap = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const a = (i - k + n) % n, c = (i + k) % n;
+      const ax = px[a]!, az = pz[a]!, bx = px[i]!, bz = pz[i]!, cx = px[c]!, cz = pz[c]!;
+      const cross = (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
+      const ab = Math.hypot(bx - ax, bz - az), bc = Math.hypot(cx - bx, cz - bz), ca = Math.hypot(ax - cx, az - cz);
+      kap[i] = (2 * Math.abs(cross)) / Math.max(ab * bc * ca, 1e-9);
+    }
+    const kSmooth = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      let m = 0;
+      for (let j = -2; j <= 2; j++) m = Math.max(m, kap[(i + j + n) % n]!);
+      kSmooth[i] = m;
+    }
+
+    const mu = p.tireMuY * skill;
+    const muX = p.tireMuX * skill * t.brakeFraction;
+    const aeroK = 0.5 * AIR_DENSITY * p.liftArea; // downforce = aeroK v^2
+    const dragK = 0.5 * AIR_DENSITY * p.dragArea;
+    const v = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      // m v^2 kappa = mu (m g + aeroK v^2)  =>  v^2 = mu m g / (m kappa - mu aeroK)
+      const den = p.mass * kSmooth[i]! - mu * aeroK;
+      v[i] = den <= 0 ? t.maxSpeed : Math.min(t.maxSpeed, Math.sqrt((mu * p.mass * GRAVITY) / den));
+    }
+    // Backward pass (braking) and forward pass (acceleration), twice round the loop.
+    for (let pass = 0; pass < 2; pass++) {
+      for (let j = 2 * n - 1; j >= 0; j--) {
+        const i = j % n, nx = (i + 1) % n;
+        const vn = v[nx]!;
+        const decel = (muX * (p.mass * GRAVITY + aeroK * vn * vn)) / p.mass + (dragK * vn * vn) / p.mass;
+        v[i] = Math.min(v[i]!, Math.sqrt(vn * vn + 2 * decel * this.ds));
+      }
+      for (let j = 0; j < 2 * n; j++) {
+        const i = (j + 1) % n, pr = j % n;
+        const vp = v[pr]!;
+        const acc = Math.min(t.accelTractionLimit, t.accelPower / (p.mass * Math.max(vp, 5))) - (dragK * vp * vp) / p.mass;
+        v[i] = Math.min(v[i]!, Math.sqrt(Math.max(0, vp * vp + 2 * Math.max(acc, 0) * this.ds)));
+      }
+    }
+    this.vmax = v;
+  }
+
+  speedAt(s: number): number {
+    return this.world.at(this.vmax, s);
+  }
+}
+
+export interface AIDecision {
+  inputs: DriverInputs;
+  state: AIState;
+  /** True when the car has been stuck long enough to be put back on track. */
+  wantsReset: boolean;
+}
+
+export function aiDrive(
+  car: CarState,
+  race: RaceCar,
+  plan: RacingPlan,
+  p: CarParams,
+  ai: AIState,
+  others: readonly { car: CarState; race: RaceCar }[],
+  dt: number,
+): AIDecision {
+  const t = AI_TUNING;
+  const w = plan.world;
+  const L = w.length;
+  const s = race.s;
+  const u = car.u;
+
+  // --- Racecraft: look for a car ahead on our line.
+  const myD = w.at(w.raceD, s) + ai.offset;
+  let desiredOffset = 0;
+  let speedCap = Infinity;
+  for (const o of others) {
+    let gap = o.race.s - s;
+    if (gap < -L / 2) gap += L;
+    if (gap <= 0 || gap > t.overtakeLookahead) continue;
+    const lat = o.race.d - myD;
+    if (Math.abs(lat) > t.carWidthClearance + 1) continue;
+    const closing = u - o.car.u;
+    if (closing > -1) {
+      // Pass on the side with more room.
+      const wl = w.at(w.wl, s), wr = w.at(w.wr, s);
+      const leftRoom = wl - o.race.d, rightRoom = o.race.d + wr;
+      const side = leftRoom > rightRoom ? 1 : -1;
+      const target = o.race.d + side * t.overtakeLateral;
+      desiredOffset = target - w.at(w.raceD, s);
+    }
+    if (gap < t.followGap && Math.abs(lat) < t.carWidthClearance) speedCap = Math.min(speedCap, o.car.u - 1);
+  }
+  const maxStep = t.offsetRate * dt;
+  let offset = ai.offset + Math.max(-maxStep, Math.min(maxStep, desiredOffset - ai.offset));
+
+  // --- Steering: pure pursuit towards a point ahead on (racing line + offset).
+  const look = t.lookaheadBase + t.lookaheadPerSpeed * Math.abs(u);
+  const sl = s + look;
+  const wl = w.at(w.wl, sl), wr = w.at(w.wr, sl);
+  const dTarget = Math.max(-wr + t.edgeMargin, Math.min(wl - t.edgeMargin, w.at(w.raceD, sl) + offset));
+  offset = dTarget - w.at(w.raceD, sl);
+  const target = w.point(sl, dTarget);
+  const fx = -Math.sin(car.yaw), fz = -Math.cos(car.yaw);
+  const lx = -Math.cos(car.yaw), lz = Math.sin(car.yaw);
+  const dx = target.x - car.x, dz = target.z - car.z;
+  const alpha = Math.atan2(dx * lx + dz * lz, dx * fx + dz * fz);
+  const wheel = Math.atan((2 * p.wheelbase * Math.sin(alpha)) / look);
+  const steer = Math.max(-1, Math.min(1, wheel / steerLock(p, Math.abs(u))));
+
+  // --- Speed.
+  const vPlan = Math.min(plan.speedAt(s + Math.max(u, 0) * t.speedLookahead), plan.speedAt(s));
+  const vTarget = Math.min(vPlan, speedCap);
+  const err = vTarget - u;
+  const throttle = err > 0 ? Math.min(1, err * t.throttleGain + 0.2) : 0;
+  const brake = err < -1 ? Math.min(1, -err * t.brakeGain) : 0;
+
+  const stuckFor = Math.abs(u) < t.stuckSpeed ? ai.stuckFor + dt : 0;
+  return {
+    inputs: { steer, throttle, brake },
+    state: { offset, stuckFor },
+    wantsReset: stuckFor > t.stuckTime,
+  };
+}

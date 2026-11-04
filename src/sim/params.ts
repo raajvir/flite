@@ -19,6 +19,8 @@ export interface ParamEntry {
 }
 
 const NUMBER_KEYS = [
+  'collisionRadius',
+  'collisionOffset',
   'mass',
   'yawInertia',
   'wheelbase',

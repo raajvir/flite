@@ -13,6 +13,11 @@
         background: rgba(20, 30, 40, 0.55); border-radius: 6px; white-space: pre;
         pointer-events: none;
       }
+      #center {
+        position: fixed; top: 30%; left: 0; right: 0; text-align: center; pointer-events: none;
+        font: 700 96px/1 ui-sans-serif, system-ui, sans-serif; color: #fff;
+        text-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+      }
       #help {
         position: fixed; bottom: 12px; left: 12px; padding: 6px 10px;
         font: 12px/1.5 ui-monospace, Menlo, monospace; color: #fff;
@@ -22,7 +27,8 @@
   </head>
   <body>
     <div id="hud"></div>
-    <div id="help">↑/W throttle · ↓/S brake (hold when stopped = reverse) · ←→/AD steer · R reset · C camera · P feel/sim · O tuning · M mute · T telemetry rec/save</div>
+    <div id="center"></div>
+    <div id="help">↑/W throttle · ↓/S brake (hold when stopped = reverse) · ←→/AD steer · R back on track · Shift+R restart · C camera · V map · P feel/sim · O tuning · M mute · T telemetry rec/save</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

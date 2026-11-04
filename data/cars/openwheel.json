@@ -7,6 +7,8 @@
   },
   "sets": {
     "sim": {
+      "collisionRadius": { "value": 0.95, "unit": "m", "source": "estimate", "note": "car body = two circles of this radius" },
+      "collisionOffset": { "value": 1.3, "unit": "m", "source": "estimate", "note": "circle centres this far ahead of / behind the CG" },
       "mass": { "value": 800, "unit": "kg", "source": "estimate", "note": "car + driver, near the usual regulation minimum" },
       "yawInertia": { "value": 700, "unit": "kg*m^2", "source": "estimate" },
       "wheelbase": { "value": 2.95, "unit": "m", "source": "estimate" },

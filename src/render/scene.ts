@@ -26,7 +26,7 @@ export interface World {
   sun: THREE.DirectionalLight;
 }
 
-export function createWorld(canvasParent: HTMLElement): World {
+export function createWorld(canvasParent: HTMLElement, testArea = true): World {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -36,7 +36,7 @@ export function createWorld(canvasParent: HTMLElement): World {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(PALETTE.sky);
-  scene.fog = new THREE.Fog(PALETTE.sky, 400, 2200);
+  scene.fog = new THREE.Fog(PALETTE.sky, testArea ? 400 : 700, testArea ? 2200 : 3000);
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x6a8a5a, 1.3));
   const sun = new THREE.DirectionalLight(0xffffff, 2.2);
@@ -52,21 +52,23 @@ export function createWorld(canvasParent: HTMLElement): World {
   sun.shadow.bias = -0.0005;
   scene.add(sun, sun.target);
 
-  // Asphalt pad covering all the courses (all asphalt in M2; surfaces come in M3),
-  // with grass as four strips AROUND it — the two never overlap, so they can't
-  // fight for the same pixels (that fight caused the green flashing).
-  const pad = { x0: -350, x1: 350, z0: -1000, z1: 100 };
-  const H = GROUND_SIZE / 2;
-  addFlat(scene, (pad.x0 + pad.x1) / 2, (pad.z0 + pad.z1) / 2, pad.x1 - pad.x0, pad.z1 - pad.z0, PALETTE.asphalt, 0);
-  addFlat(scene, (pad.x0 - H) / 2, 0, H + pad.x0, 2 * H, PALETTE.grass, 0); // left
-  addFlat(scene, (pad.x1 + H) / 2, 0, H - pad.x1, 2 * H, PALETTE.grass, 0); // right
-  addFlat(scene, (pad.x0 + pad.x1) / 2, (pad.z0 - H) / 2, pad.x1 - pad.x0, H + pad.z0, PALETTE.grass, 0); // far
-  addFlat(scene, (pad.x0 + pad.x1) / 2, (pad.z1 + H) / 2, pad.x1 - pad.x0, H - pad.z1, PALETTE.grass, 0); // behind
-  // Painted lines (the only overlays): start line + lane edges of the main straight.
-  addFlat(scene, 0, 0, 14, 0.4, PALETTE.line, 0.02);
-  for (const x of [-7, 7]) addFlat(scene, x, -400, 0.25, 800, PALETTE.line, 0.02);
+  if (testArea) {
+    // Asphalt pad covering all the courses (all asphalt in M2; surfaces come in M3),
+    // with grass as four strips AROUND it — the two never overlap, so they can't
+    // fight for the same pixels (that fight caused the green flashing).
+    const pad = { x0: -350, x1: 350, z0: -1000, z1: 100 };
+    const H = GROUND_SIZE / 2;
+    addFlat(scene, (pad.x0 + pad.x1) / 2, (pad.z0 + pad.z1) / 2, pad.x1 - pad.x0, pad.z1 - pad.z0, PALETTE.asphalt, 0);
+    addFlat(scene, (pad.x0 - H) / 2, 0, H + pad.x0, 2 * H, PALETTE.grass, 0); // left
+    addFlat(scene, (pad.x1 + H) / 2, 0, H - pad.x1, 2 * H, PALETTE.grass, 0); // right
+    addFlat(scene, (pad.x0 + pad.x1) / 2, (pad.z0 - H) / 2, pad.x1 - pad.x0, H + pad.z0, PALETTE.grass, 0); // far
+    addFlat(scene, (pad.x0 + pad.x1) / 2, (pad.z1 + H) / 2, pad.x1 - pad.x0, H - pad.z1, PALETTE.grass, 0); // behind
+    // Painted lines (the only overlays): start line + lane edges of the main straight.
+    addFlat(scene, 0, 0, 14, 0.4, PALETTE.line, 0.02);
+    for (const x of [-7, 7]) addFlat(scene, x, -400, 0.25, 800, PALETTE.line, 0.02);
 
-  addCourses(scene);
+    addCourses(scene);
+  }
   return { renderer, scene, sun };
 }
 

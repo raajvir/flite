@@ -30,7 +30,20 @@ export interface WheelState {
   /** Tire force in wheel frame, N (output) */
   fx: number;
   fy: number;
+  /** Surface id under this wheel (index into the surface table) */
+  surface: number;
+  /** Bump height under this wheel, m (surface roughness; for visuals and telemetry) */
+  bump: number;
 }
+
+/** Forces from outside the car (car-to-car contact), body frame: fx forward, fy left, mz about +Y. */
+export interface ExternalForce {
+  fx: number;
+  fy: number;
+  mz: number;
+}
+
+export const NO_FORCE: Readonly<ExternalForce> = { fx: 0, fy: 0, mz: 0 };
 
 /**
  * Full car state. Plain numbers/arrays only, so it can be copied, sent to the
@@ -71,6 +84,9 @@ export interface CarState {
   /** Body roll on the suspension, rad (positive = leaning right / right side down) and its rate */
   roll: number;
   rollRate: number;
+  /** Ground slope along the body's forward and left axes (dh/dforward, dh/dleft) */
+  slopeF: number;
+  slopeL: number;
   wheels: [WheelState, WheelState, WheelState, WheelState];
 }
 
@@ -81,7 +97,7 @@ export interface Pose {
   yaw: number;
 }
 
-const restingWheel = (): WheelState => ({ omega: 0, spin: 0, kappa: 0, tanAlpha: 0, load: 0, fx: 0, fy: 0 });
+const restingWheel = (): WheelState => ({ omega: 0, spin: 0, kappa: 0, tanAlpha: 0, load: 0, fx: 0, fy: 0, surface: 0, bump: 0 });
 
 export function initialState(pose: Pose, idleRpm = 0): CarState {
   return {
@@ -101,6 +117,8 @@ export function initialState(pose: Pose, idleRpm = 0): CarState {
     pitchRate: 0,
     roll: 0,
     rollRate: 0,
+    slopeF: 0,
+    slopeL: 0,
     wheels: [restingWheel(), restingWheel(), restingWheel(), restingWheel()],
   };
 }
