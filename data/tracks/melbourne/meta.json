@@ -1,0 +1,17 @@
+{
+  "display_name": "Australian circuit",
+  "official_length_m": 5303,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      -37.8717,
+      144.9346,
+      -37.8277,
+      145.0014
+    ],
+    "dataset": "srtm30m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": [],
+  "layout_note": "pre-2022 layout \u2014 that's what the source data contains"
+}

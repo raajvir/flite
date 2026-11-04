@@ -1,0 +1,16 @@
+{
+  "display_name": "Mexican circuit",
+  "official_length_m": 4304,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      19.3822,
+      -99.1187,
+      19.4262,
+      -99.0627
+    ],
+    "dataset": "srtm30m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": []
+}

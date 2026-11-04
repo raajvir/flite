@@ -1,0 +1,16 @@
+{
+  "display_name": "Bahraini circuit",
+  "official_length_m": 5412,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      26.0105,
+      50.4812,
+      26.0545,
+      50.54
+    ],
+    "dataset": "srtm30m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": []
+}

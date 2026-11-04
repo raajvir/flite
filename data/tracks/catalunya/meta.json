@@ -1,0 +1,16 @@
+{
+  "display_name": "Spanish circuit",
+  "official_length_m": 4657,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      41.548,
+      2.2258,
+      41.592,
+      2.2964
+    ],
+    "dataset": "eudem25m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": []
+}

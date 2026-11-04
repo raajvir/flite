@@ -292,6 +292,12 @@ def build(name: str) -> dict:
         "terrain": terrain,
     }
     (tdir / "track.json").write_text(json.dumps(out, separators=(",", ":")))
+    # Small summary for menus: name, lengths and a coarse outline (every ~20 m).
+    step = max(1, int(20 / DS))
+    info = {"name": out["name"], "length_m": out["length_m"], "official_length_m": official,
+            "layout_note": meta.get("layout_note"),
+            "outline": [[round(float(track.x[i]), 1), round(float(track.z[i]), 1)] for i in range(0, len(track.s), step)]}
+    (tdir / "info.json").write_text(json.dumps(info, separators=(",", ":")))
     (tdir / "corners.json").write_text(json.dumps(corners, indent=2))
     return out
 

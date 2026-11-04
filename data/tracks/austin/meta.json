@@ -1,0 +1,16 @@
+{
+  "display_name": "American circuit",
+  "official_length_m": 5513,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      30.1108,
+      -97.6716,
+      30.1548,
+      -97.6106
+    ],
+    "dataset": "srtm30m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": []
+}

@@ -5,8 +5,7 @@
  * Starting reloads the page with the choices in the URL (simple and reliable: the
  * worker and scene are built once per race).
  */
-import type { CircuitName } from '../sim/tracks';
-import type { TrackWorld } from '../sim/trackWorld';
+import type { CircuitName, TrackInfo } from '../sim/tracks';
 
 const CSS = `
 .menu { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 20;
@@ -18,12 +17,12 @@ const CSS = `
 .menu h1 span { color: #e10600; }
 .menu .sub { color: #9fb0c0; margin-bottom: 18px; }
 .menu h2 { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #9fb0c0; margin: 16px 0 8px; }
-.menu .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.menu .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; max-height: 46vh; overflow-y: auto; padding-right: 4px; }
 .menu .card { background: rgba(255,255,255,0.06); border: 2px solid transparent; border-radius: 10px; padding: 10px;
   cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 .menu .card:hover { background: rgba(255,255,255,0.1); }
 .menu .card.sel { border-color: #e10600; background: rgba(225,6,0,0.12); }
-.menu .card svg { width: 100%; height: 90px; }
+.menu .card svg { width: 100%; height: 64px; }
 .menu .card .name { font-weight: 800; }
 .menu .card .len { color: #9fb0c0; font-size: 12px; }
 .menu .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 18px; }
@@ -47,10 +46,8 @@ export interface MenuChoice {
   mode: string;
 }
 
-export interface CircuitInfo {
+export interface CircuitInfo extends TrackInfo {
   id: CircuitName;
-  name: string;
-  world: () => TrackWorld;
 }
 
 function injectCss(): void {
@@ -61,24 +58,20 @@ function injectCss(): void {
   document.head.appendChild(style);
 }
 
-function outline(world: TrackWorld): SVGSVGElement {
+function outline(pts: [number, number][]): SVGSVGElement {
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('viewBox', '0 0 100 100');
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-  for (let i = 0; i < world.n; i++) {
-    minX = Math.min(minX, world.x[i]!);
-    maxX = Math.max(maxX, world.x[i]!);
-    minZ = Math.min(minZ, world.z[i]!);
-    maxZ = Math.max(maxZ, world.z[i]!);
+  for (const [x, z] of pts) {
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minZ = Math.min(minZ, z);
+    maxZ = Math.max(maxZ, z);
   }
   const k = 90 / Math.max(maxX - minX, maxZ - minZ);
   const ox = 50 - ((minX + maxX) / 2) * k, oz = 50 - ((minZ + maxZ) / 2) * k;
-  let d = '';
-  for (let i = 0; i <= world.n; i += 6) {
-    const j = i % world.n;
-    d += `${i === 0 ? 'M' : 'L'}${(world.x[j]! * k + ox).toFixed(1)},${(world.z[j]! * k + oz).toFixed(1)}`;
-  }
+  const d = pts.map(([x, z], i) => `${i === 0 ? 'M' : 'L'}${(x * k + ox).toFixed(1)},${(z * k + oz).toFixed(1)}`).join('');
   const path = document.createElementNS(svgNS, 'path');
   path.setAttribute('d', d + 'Z');
   path.setAttribute('fill', 'none');
@@ -114,9 +107,8 @@ export function showStartMenu(
   for (const c of circuits) {
     const card = document.createElement('div');
     card.className = 'card';
-    const w = c.world();
-    card.append(outline(w));
-    card.insertAdjacentHTML('beforeend', `<div class="name">${c.name}</div><div class="len">${(w.length / 1000).toFixed(3)} km</div>`);
+    card.append(outline(c.outline));
+    card.insertAdjacentHTML('beforeend', `<div class="name">${c.name}</div><div class="len">${(c.length_m / 1000).toFixed(3)} km${c.layout_note ? ' · older layout' : ''}</div>`);
     card.addEventListener('click', () => pickTrack(c.id));
     cards.append(card);
     allCards.push([card, c.id]);

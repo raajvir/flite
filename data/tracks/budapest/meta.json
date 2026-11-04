@@ -1,0 +1,16 @@
+{
+  "display_name": "Hungarian circuit",
+  "official_length_m": 4381,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      47.5569,
+      19.2095,
+      47.6009,
+      19.2877
+    ],
+    "dataset": "eudem25m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": []
+}

@@ -5,7 +5,7 @@ import { BrakingLine } from '../../src/render/brakingLine';
 import { loadTrack } from '../../src/sim/tracks';
 import { params } from '../sim/helpers';
 
-const world = loadTrack('monza');
+const world = await loadTrack('monza');
 const p = params('feel');
 
 function colours(s: number, speed: number) {

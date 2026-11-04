@@ -60,7 +60,7 @@ let telemetry: TelemetryValue[][] = [];
 
 const load = (set: ParamSetName, overrides: ParamOverrides): CarParams => loadCarParams(CAR, set, overrides);
 
-function build(o: StartOptions): void {
+async function build(o: StartOptions): Promise<void> {
   history = [];
   simT = 0;
   const playerParams = load(o.paramSet, o.overrides);
@@ -71,7 +71,7 @@ function build(o: StartOptions): void {
     return;
   }
   solo = null;
-  const world = loadTrack(o.track);
+  const world = await loadTrack(o.track);
   const aiParams = aiCarParams(CAR);
   const skills = skillsFor(o.aiDifficulty, o.aiCount);
   const setups: { params: CarParams; ai?: { skill: number } }[] = [
@@ -153,13 +153,13 @@ ctx.onmessage = (e) => {
   switch (msg.type) {
     case 'start':
       options = msg.options;
-      build(options);
-      if (!running) {
+      void build(options).then(() => {
+        if (running) return;
         running = true;
         lastWall = performance.now();
         rateWindowStart = lastWall;
         tick();
-      }
+      });
       break;
     case 'setParams': {
       if (!options) break;
@@ -188,7 +188,7 @@ ctx.onmessage = (e) => {
       if (solo) solo.state = initialState({ x: 0, y: 0, z: 0, yaw: 0 }, solo.params.idleRpm, solo.params.ersCapacity);
       break;
     case 'restart':
-      if (options) build(options);
+      if (options) void build(options);
       break;
     case 'pause':
       paused = msg.paused;

@@ -5,7 +5,7 @@ import { loadTrack } from '../../src/sim/tracks';
 import { initialState, type CarState } from '../../src/sim/types';
 import { params } from '../sim/helpers';
 
-const world = loadTrack('monza');
+const world = await loadTrack('monza');
 const p = params('feel');
 const plan = new RacingPlan(world, p, 0.9);
 

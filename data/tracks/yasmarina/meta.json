@@ -1,0 +1,17 @@
+{
+  "display_name": "Emirati circuit",
+  "official_length_m": 5554,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      24.4452,
+      54.5741,
+      24.4892,
+      54.6321
+    ],
+    "dataset": "srtm30m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": [],
+  "layout_note": "2009\u20132020 layout \u2014 that's what the source data contains"
+}

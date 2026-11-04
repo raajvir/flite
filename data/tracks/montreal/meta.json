@@ -1,0 +1,16 @@
+{
+  "display_name": "Canadian circuit",
+  "official_length_m": 4361,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      45.478,
+      -73.5605,
+      45.522,
+      -73.4851
+    ],
+    "dataset": "srtm30m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": []
+}

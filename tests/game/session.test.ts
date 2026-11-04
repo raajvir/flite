@@ -6,7 +6,7 @@ import { loadTrack, surfaceTable } from '../../src/sim/tracks';
 import { initialState } from '../../src/sim/types';
 import { params } from '../sim/helpers';
 
-const world = loadTrack('monza');
+const world = await loadTrack('monza');
 const feel = params('feel');
 const NONE = { steer: 0, throttle: 0, brake: 0 };
 

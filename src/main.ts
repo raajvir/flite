@@ -16,7 +16,7 @@ import { BrakingLine } from './render/brakingLine';
 import { buildScenery, type SceneryFile } from './render/scenery';
 import { RacingPlan } from './ai/aiDriver';
 import { loadCarParams, PARAM_SETS, type CarFile, type CarParams, type ParamSetName } from './sim/params';
-import { CIRCUITS, isCircuit, loadTrack, sceneryFor, surfaceTable, TRACKS, type TrackName } from './sim/tracks';
+import { CIRCUITS, isCircuit, loadTrack, sceneryFor, surfaceTable, trackInfo, type TrackName } from './sim/tracks';
 import type { TrackWorld } from './sim/trackWorld';
 import type { CarState } from './sim/types';
 import { TuningPanel, type InputSettings } from './ui/tuningPanel';
@@ -79,9 +79,9 @@ let params = loadCarParams(CAR, paramSet, panel.current().overrides);
 if (query.has('tuning')) panel.toggle();
 
 const world = createWorld(document.body, trackName === 'test');
-const track: TrackWorld | null = trackName === 'test' ? null : loadTrack(trackName);
+const track: TrackWorld | null = trackName === 'test' ? null : await loadTrack(trackName);
 if (track) world.scene.add(buildTrackMesh(track));
-const scenery = track && trackName !== 'test' ? buildScenery(track, sceneryFor(trackName) as SceneryFile) : null;
+const scenery = track && trackName !== 'test' ? buildScenery(track, (await sceneryFor(trackName)) as SceneryFile) : null;
 if (scenery) world.scene.add(scenery.group);
 
 // Braking line: the AI's speed plan, built for the player's own car.
@@ -277,7 +277,7 @@ if (menuMode) {
     if (e) e.style.display = 'none';
   }
   showStartMenu(
-    CIRCUITS.map((id) => ({ id, name: TRACKS[id].name, world: () => loadTrack(id) })),
+    CIRCUITS.map((id) => ({ id, ...trackInfo(id) })),
     { track: trackName, laps, ai: aiCount, difficulty: panel.race.aiDifficulty, mode: panel.activeMode.id },
     panel.modes(),
     (c) => {

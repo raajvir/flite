@@ -1,0 +1,135 @@
+[
+  {
+    "s_start": 961.9,
+    "s_end": 1005.9,
+    "s_apex": 983.9,
+    "direction": "right",
+    "min_radius_m": 15.8
+  },
+  {
+    "s_start": 1049.9,
+    "s_end": 1095.9,
+    "s_apex": 1077.9,
+    "direction": "left",
+    "min_radius_m": 20.8
+  },
+  {
+    "s_start": 1099.9,
+    "s_end": 1143.9,
+    "s_apex": 1125.9,
+    "direction": "right",
+    "min_radius_m": 18.7
+  },
+  {
+    "s_start": 1167.9,
+    "s_end": 1197.9,
+    "s_apex": 1181.9,
+    "direction": "right",
+    "min_radius_m": 145.2
+  },
+  {
+    "s_start": 1229.9,
+    "s_end": 1269.9,
+    "s_apex": 1245.9,
+    "direction": "right",
+    "min_radius_m": 216.9
+  },
+  {
+    "s_start": 1803.9,
+    "s_end": 1845.9,
+    "s_apex": 1823.9,
+    "direction": "left",
+    "min_radius_m": 15.6
+  },
+  {
+    "s_start": 1875.9,
+    "s_end": 1931.9,
+    "s_apex": 1899.9,
+    "direction": "right",
+    "min_radius_m": 14.0
+  },
+  {
+    "s_start": 2003.9,
+    "s_end": 2089.9,
+    "s_apex": 2035.9,
+    "direction": "right",
+    "min_radius_m": 20.1
+  },
+  {
+    "s_start": 2353.8,
+    "s_end": 2415.8,
+    "s_apex": 2385.8,
+    "direction": "left",
+    "min_radius_m": 29.7
+  },
+  {
+    "s_start": 2451.8,
+    "s_end": 2515.8,
+    "s_apex": 2487.8,
+    "direction": "right",
+    "min_radius_m": 70.3
+  },
+  {
+    "s_start": 2527.8,
+    "s_end": 2625.8,
+    "s_apex": 2603.8,
+    "direction": "left",
+    "min_radius_m": 57.3
+  },
+  {
+    "s_start": 2723.8,
+    "s_end": 2807.8,
+    "s_apex": 2759.8,
+    "direction": "right",
+    "min_radius_m": 43.6
+  },
+  {
+    "s_start": 2817.8,
+    "s_end": 2909.8,
+    "s_apex": 2859.8,
+    "direction": "left",
+    "min_radius_m": 75.2
+  },
+  {
+    "s_start": 2999.8,
+    "s_end": 3071.8,
+    "s_apex": 3031.8,
+    "direction": "left",
+    "min_radius_m": 157.4
+  },
+  {
+    "s_start": 3401.8,
+    "s_end": 3457.8,
+    "s_apex": 3425.8,
+    "direction": "right",
+    "min_radius_m": 21.3
+  },
+  {
+    "s_start": 3579.8,
+    "s_end": 3639.7,
+    "s_apex": 3605.7,
+    "direction": "left",
+    "min_radius_m": 15.0
+  },
+  {
+    "s_start": 3643.7,
+    "s_end": 3689.7,
+    "s_apex": 3671.7,
+    "direction": "right",
+    "min_radius_m": 19.2
+  },
+  {
+    "s_start": 3693.7,
+    "s_end": 3727.7,
+    "s_apex": 3703.7,
+    "direction": "left",
+    "min_radius_m": 50.6
+  },
+  {
+    "s_start": 3745.7,
+    "s_end": 4019.7,
+    "s_apex": 3793.7,
+    "direction": "right",
+    "min_radius_m": 21.5
+  }
+]

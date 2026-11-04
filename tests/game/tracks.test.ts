@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { aiCarParams } from '../../src/ai/aiParams';
 import { Session } from '../../src/game/session';
-import { CIRCUITS, loadTrack, TRACKS } from '../../src/sim/tracks';
+import { CIRCUITS, loadTrack, trackInfo } from '../../src/sim/tracks';
 import { CAR } from '../sim/helpers';
 
 const ap = aiCarParams(CAR);
 
 describe.each(CIRCUITS)('%s', (name) => {
-  const world = loadTrack(name);
-
-  it('length is within 1% of the official length', () => {
-    const official = (TRACKS[name].track as { official_length_m: number }).official_length_m;
+  it('length is within 1% of the official length', async () => {
+    const world = await loadTrack(name);
+    const official = trackInfo(name).official_length_m;
     expect(Math.abs(world.length - official) / official).toBeLessThan(0.01);
   });
 
-  it('the AI laps it without leaving the track, in a sensible time', () => {
+  it('the AI laps it without leaving the track, in a sensible time', async () => {
+    const world = await loadTrack(name);
     const sess = new Session(world, [{ params: ap, ai: { skill: 0.9 } }], 2, 0);
     let worstOff = -Infinity;
     let worstJump = 0;
@@ -37,14 +37,14 @@ describe.each(CIRCUITS)('%s', (name) => {
 });
 
 describe('elevation', () => {
-  it('the Belgian circuit has its big climb (~100 m)', () => {
-    const w = loadTrack('spa');
+  it('the Belgian circuit has its big climb (~100 m)', async () => {
+    const w = await loadTrack('spa');
     expect(Math.max(...w.elev) - Math.min(...w.elev)).toBeGreaterThan(80);
   });
 
-  it('the Japanese circuit crosses itself on a bridge with clearance', () => {
-    const w = loadTrack('suzuka');
-    const x = (TRACKS.suzuka.track as { crossovers: { s_over: number; s_under: number; clearance_m: number }[] }).crossovers[0]!;
+  it('the Japanese circuit crosses itself on a bridge with clearance', async () => {
+    const w = await loadTrack('suzuka');
+    const x = (w.track.crossovers ?? [])[0]! as { s_over: number; s_under: number; clearance_m: number };
     expect(w.at(w.elev, x.s_over) - w.at(w.elev, x.s_under)).toBeGreaterThan(x.clearance_m - 0.5);
     // At the crossing point a car's height picks the right level.
     const p = w.point(x.s_under, 0);

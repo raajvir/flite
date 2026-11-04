@@ -1,0 +1,16 @@
+{
+  "display_name": "German circuit",
+  "official_length_m": 4574,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      49.3058,
+      8.5251,
+      49.3498,
+      8.6061
+    ],
+    "dataset": "eudem25m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": []
+}

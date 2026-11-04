@@ -1,0 +1,114 @@
+[
+  {
+    "s_start": 590.1,
+    "s_end": 868.1,
+    "s_apex": 638.1,
+    "direction": "right",
+    "min_radius_m": 19.0
+  },
+  {
+    "s_start": 1072.2,
+    "s_end": 1234.2,
+    "s_apex": 1112.2,
+    "direction": "left",
+    "min_radius_m": 34.8
+  },
+  {
+    "s_start": 1310.2,
+    "s_end": 1370.2,
+    "s_apex": 1342.2,
+    "direction": "right",
+    "min_radius_m": 37.2
+  },
+  {
+    "s_start": 1718.3,
+    "s_end": 1780.3,
+    "s_apex": 1774.3,
+    "direction": "right",
+    "min_radius_m": 247.0
+  },
+  {
+    "s_start": 1790.3,
+    "s_end": 1850.3,
+    "s_apex": 1818.3,
+    "direction": "left",
+    "min_radius_m": 35.6
+  },
+  {
+    "s_start": 1990.3,
+    "s_end": 2158.4,
+    "s_apex": 2028.3,
+    "direction": "right",
+    "min_radius_m": 45.0
+  },
+  {
+    "s_start": 2176.4,
+    "s_end": 2220.4,
+    "s_apex": 2194.4,
+    "direction": "right",
+    "min_radius_m": 285.5
+  },
+  {
+    "s_start": 2356.4,
+    "s_end": 2458.4,
+    "s_apex": 2390.4,
+    "direction": "right",
+    "min_radius_m": 22.6
+  },
+  {
+    "s_start": 2558.4,
+    "s_end": 2638.5,
+    "s_apex": 2616.4,
+    "direction": "left",
+    "min_radius_m": 41.1
+  },
+  {
+    "s_start": 2684.5,
+    "s_end": 2794.5,
+    "s_apex": 2738.5,
+    "direction": "right",
+    "min_radius_m": 38.9
+  },
+  {
+    "s_start": 2896.5,
+    "s_end": 2986.5,
+    "s_apex": 2944.5,
+    "direction": "left",
+    "min_radius_m": 81.4
+  },
+  {
+    "s_start": 3062.5,
+    "s_end": 3182.5,
+    "s_apex": 3116.5,
+    "direction": "right",
+    "min_radius_m": 69.9
+  },
+  {
+    "s_start": 3510.6,
+    "s_end": 3574.6,
+    "s_apex": 3536.6,
+    "direction": "right",
+    "min_radius_m": 22.8
+  },
+  {
+    "s_start": 3668.6,
+    "s_end": 3702.6,
+    "s_apex": 3690.6,
+    "direction": "left",
+    "min_radius_m": 295.0
+  },
+  {
+    "s_start": 3732.6,
+    "s_end": 3886.7,
+    "s_apex": 3752.6,
+    "direction": "left",
+    "min_radius_m": 33.0
+  },
+  {
+    "s_start": 3982.7,
+    "s_end": 4206.7,
+    "s_apex": 4110.7,
+    "direction": "right",
+    "min_radius_m": 57.5
+  }
+]

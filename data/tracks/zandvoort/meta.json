@@ -1,0 +1,17 @@
+{
+  "display_name": "Dutch circuit",
+  "official_length_m": 4307,
+  "start_s_m": 0,
+  "geo": {
+    "bbox": [
+      52.3668,
+      4.4976,
+      52.4108,
+      4.5842
+    ],
+    "dataset": "eudem25m"
+  },
+  "banking_note": "Camber values are GAMEPLAY ESTIMATES (no survey data). Positive = left edge higher.",
+  "banking": [],
+  "layout_note": "pre-2020 layout (before the banked rebuild) \u2014 that's what the source data contains"
+}
