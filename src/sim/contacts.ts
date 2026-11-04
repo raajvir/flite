@@ -33,7 +33,10 @@ function circles(s: CarState, p: CarParams): [Circle, Circle] {
   return [make(1), make(-1)];
 }
 
-export function carContacts(states: readonly CarState[], params: readonly CarParams[], c: ContactParams): ExternalForce[] {
+/**
+ * @param assistScale multiplies every car's collisionAssist (0 = full, unassisted contact)
+ */
+export function carContacts(states: readonly CarState[], params: readonly CarParams[], c: ContactParams, assistScale = 1): ExternalForce[] {
   const n = states.length;
   const fx = new Float64Array(n), fz = new Float64Array(n), tq = new Float64Array(n);
   let any = false;
@@ -61,7 +64,7 @@ export function carContacts(states: readonly CarState[], params: readonly CarPar
           const f = vt > 0.2 ? (c.carFriction * N) / vt : (c.carFriction * N) / 0.2;
           // Force on b: +N n - friction along its relative sliding; on a: the opposite.
           // Each car feels the friction and the twist scaled by (1 - its collision assist).
-          const ka = 1 - pi.collisionAssist, kb = 1 - pj.collisionAssist;
+          const ka = 1 - pi.collisionAssist * assistScale, kb = 1 - pj.collisionAssist * assistScale;
           const Fbx = N * nx - f * tx * kb, Fbz = N * nz - f * tz * kb;
           const Fax = -N * nx + f * tx * ka, Faz = -N * nz + f * tz * ka;
           fx[j]! += Fbx;

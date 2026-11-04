@@ -44,6 +44,8 @@ export interface MenuChoice {
   difficulty: number;
   /** Drive mode id */
   mode: string;
+  /** Hot lap (time trial) instead of a race */
+  hotlap: boolean;
 }
 
 export interface CircuitInfo extends TrackInfo {
@@ -163,6 +165,7 @@ export function showStartMenu(
     return box;
   };
   opts.append(
+    seg('Session', [['Race', 'race'], ['Hot lap', 'hotlap']], choice.hotlap ? 'hotlap' : 'race', (v) => (choice.hotlap = v === 'hotlap')),
     seg('Laps', [['1', 1], ['3', 3], ['5', 5], ['10', 10]], choice.laps, (v) => (choice.laps = Number(v))),
     slider('Opponents', 0, 15, 1, choice.ai, (v) => (v === 0 ? 'practice' : String(v)), (v) => (choice.ai = v)),
     slider('AI difficulty', 0, 1, 0.01, choice.difficulty, (v) => `${Math.round(v * 100)}%`, (v) => (choice.difficulty = v)),

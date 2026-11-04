@@ -12,6 +12,9 @@ import type { CarState } from '../sim/types';
 import { fmtTime } from './dash';
 
 /** Fictional three-letter driver codes for the AI field (player is "YOU"). */
+/** A race this long is a hot lap session (unlimited laps). */
+const HOTLAP_LAPS = 999;
+
 export const DRIVER_CODES = ['KAI', 'DMT', 'LOR', 'BRV', 'OKE', 'MAR', 'SIL', 'TEO', 'VAN', 'QUI', 'RAF', 'ELI', 'JUN', 'ODA', 'PAX', 'REN'];
 
 const CSS = `
@@ -35,6 +38,11 @@ const CSS = `
 #lapbox .t { display: flex; justify-content: space-between; font-family: ui-monospace, Menlo, monospace; gap: 12px; }
 #lapbox .t span:first-child { color: #9fb0c0; font-family: ui-sans-serif, system-ui; font-weight: 700; font-size: 11px; letter-spacing: 0.08em; }
 #lapbox .cur { font-size: 18px; margin: 2px 0 4px; }
+#lapbox .sectors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 6px 0 4px; }
+#lapbox .sec { border-radius: 4px; padding: 3px 4px; background: #2a3440; font: 700 11px/1.2 ui-monospace, Menlo, monospace; text-align: center; }
+#lapbox .sec.purple { background: #8e44c9; } #lapbox .sec.green { background: #1fa34a; } #lapbox .sec.yellow { background: #c9a400; color: #111; }
+#lapbox .delta { font: 800 16px/1.2 ui-monospace, Menlo, monospace; text-align: right; }
+#lapbox .delta.ahead { color: #2ee84b; } #lapbox .delta.behind { color: #ff5a4f; }
 #minimap { left: 14px; bottom: 14px; width: 220px; height: 220px; background: rgba(12, 14, 20, 0.6); border-radius: 10px; }
 #minimap svg { width: 100%; height: 100%; }
 #banner { left: 50%; top: 22%; transform: translateX(-50%); padding: 10px 22px; border-radius: 8px; font-weight: 800;
@@ -59,6 +67,9 @@ export class RaceUi {
   private readonly cur = el('div', 't cur');
   private readonly last = el('div', 't');
   private readonly best = el('div', 't');
+  private readonly sectorBox = el('div', 'sectors');
+  private readonly secEls: HTMLElement[] = [];
+  private readonly delta = el('div', 'delta');
   private readonly minimap = el('div', 'rui');
   private readonly dots: SVGCircleElement[] = [];
   private readonly banner = el('div', 'rui');
@@ -81,7 +92,12 @@ export class RaceUi {
     this.towerHead.append(el('span', '', 'Lap'), el('span'));
     this.tower.append(this.towerHead);
     this.lapbox.id = 'lapbox';
-    this.lapbox.append(el('div', 'lap', 'lap'), this.lapNum, this.cur, this.last, this.best);
+    for (let k = 0; k < 3; k++) {
+      const e = el('div', 'sec', `S${k + 1}`);
+      this.secEls.push(e);
+      this.sectorBox.append(e);
+    }
+    this.lapbox.append(el('div', 'lap', 'lap'), this.lapNum, this.cur, this.delta, this.sectorBox, this.last, this.best);
     this.minimap.id = 'minimap';
     this.banner.id = 'banner';
     document.body.append(this.tower, this.lapbox, this.minimap, this.banner);
@@ -198,17 +214,38 @@ export class RaceUi {
     });
 
     // Lap box.
-    this.lapNum.textContent = mine.finished ? 'FINISH' : `${lap} / ${race.laps}`;
+    this.lapNum.textContent = mine.finished ? 'FINISH' : race.laps >= HOTLAP_LAPS ? `HOT LAP ${Math.max(mine.lap, 1)}` : `${lap} / ${race.laps}`;
     this.cur.innerHTML = `<span>TIME</span><span>${fmtTime(mine.lap >= 1 ? mine.lapTime : null)}</span>`;
     this.last.innerHTML = `<span>LAST</span><span>${fmtTime(mine.lastLap)}</span>`;
     this.best.innerHTML = `<span>BEST</span><span>${fmtTime(mine.bestLap)}</span>`;
+
+    // Sectors: the lap in progress (completed ones), otherwise the last lap. Purple = fastest
+    // of anyone, green = personal best, yellow = slower.
+    const current = mine.sectors.some((x) => x !== null);
+    const show = current ? mine.sectors : mine.lastSectors;
+    this.secEls.forEach((e, k) => {
+      const v = show[k] ?? null;
+      e.textContent = v === null ? `S${k + 1}` : v.toFixed(3);
+      e.className = 'sec';
+      if (v === null) return;
+      const overall = race.bestSectorsOverall[k] ?? null;
+      const pb = mine.bestSectors[k] ?? null;
+      e.classList.add(overall !== null && v <= overall + 1e-6 ? 'purple' : pb !== null && v <= pb + 1e-6 ? 'green' : 'yellow');
+    });
+    // Live delta to your best lap.
+    if (mine.delta !== null && mine.lap >= 1) {
+      this.delta.textContent = `${mine.delta <= 0 ? '−' : '+'}${Math.abs(mine.delta).toFixed(3)}`;
+      this.delta.className = `delta ${mine.delta <= 0 ? 'ahead' : 'behind'}`;
+    } else {
+      this.delta.textContent = '';
+    }
 
     // Banners.
     if (race.fastest && race.fastest.time !== this.lastFastest) {
       if (this.lastFastest !== null || race.fastest.car === me) this.flash(`Fastest lap · ${this.code(race.fastest.car)} · ${fmtTime(race.fastest.time)}`, now);
       this.lastFastest = race.fastest.time;
     }
-    if (!this.announcedFinalLap && race.laps > 1 && mine.lap === race.laps) {
+    if (!this.announcedFinalLap && race.laps > 1 && race.laps < HOTLAP_LAPS && mine.lap === race.laps) {
       this.announcedFinalLap = true;
       this.flash('Final lap', now);
     }

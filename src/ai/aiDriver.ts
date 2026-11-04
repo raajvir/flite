@@ -135,9 +135,10 @@ export class RacingPlan {
 
   constructor(
     readonly world: TrackWorld,
-    p: CarParams,
+    readonly params: CarParams,
     readonly skill: number,
   ) {
+    const p = params;
     const t = AI_TUNING;
     const n = world.n;
     this.n = n;

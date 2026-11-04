@@ -19,6 +19,12 @@ Esc opens the pause menu (resume, rewind, restart, settings, main menu, and the 
 Drive modes: Default (the tuned feel set), Sim, Arcade (very grippy, snappy and drifty), plus your own: tweak in the tuning panel (O) and
 "Save as new mode". P cycles modes while driving.
 
+Sessions: Race, or Hot lap (alone, flying start, unlimited laps, live delta to your best).
+Lap box shows sector times: purple = fastest of anyone, green = personal best, yellow = slower.
+Race settings (O → Race): car contact Full / Assisted / Ghost cars (see-through, no contact, no tow).
+Driving aids (O → Driving aids & input): steering assist (keeps you from drifting off) and
+braking assist (brakes for corners you arrive at too fast), both adjustable 0–100%.
+
 Trackpad steering: K (or tuning panel → Steering input). Click the game to capture the pointer,
 slide one finger left/right to steer; keys still do throttle/brake/boost. Range and centring are
 adjustable. Esc releases the pointer and pauses.
@@ -105,7 +111,7 @@ docs/demos/  screenshots from each milestone
 
 ## Play online
 
-https://raajvir.github.io/flite/ — rebuilt and redeployed automatically on every push to `main`
+https://raajvir.com/flite/ (also raajvir.github.io/flite) — rebuilt and redeployed automatically on every push to `main`
 (see `.github/workflows/deploy.yml`).
 
 ## Credits and data licenses

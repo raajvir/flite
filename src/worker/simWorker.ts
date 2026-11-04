@@ -24,6 +24,10 @@ import type { FromWorker, StartOptions, ToWorker } from './protocol';
 const TICK_MS = 4;
 /** If the tab stalls (e.g. backgrounded), don't try to catch up more than this. */
 const MAX_STEPS_PER_TICK = 250;
+/** Hot lap: run-up distance before the line (m), speed at the start (m/s), "unlimited" laps. */
+const HOTLAP_RUNUP = 400;
+const HOTLAP_SPEED = 45;
+const HOTLAP_LAPS = 999;
 /** Rewind history: a snapshot every N steps, keeping this many (100 x 120 = 12 s). */
 const HISTORY_EVERY = 100;
 const HISTORY_LENGTH = 120;
@@ -73,6 +77,13 @@ async function build(o: StartOptions): Promise<void> {
   solo = null;
   const world = await loadTrack(o.track);
   const aiParams = aiCarParams(CAR);
+  if (o.hotlap) {
+    // Hot lap: alone, already at speed, unlimited laps.
+    session = new Session(world, [{ params: playerParams }], HOTLAP_LAPS, 0, undefined, { distance: HOTLAP_RUNUP, speed: HOTLAP_SPEED });
+    session.contactMode = o.contact;
+    playerIndex = 0;
+    return;
+  }
   const skills = skillsFor(o.aiDifficulty, o.aiCount);
   const setups: { params: CarParams; ai?: { skill: number } }[] = [
     o.autopilot ? { params: aiParams, ai: { skill: skillsFor(o.aiDifficulty, 1)[0]! } } : { params: playerParams },
@@ -82,6 +93,7 @@ async function build(o: StartOptions): Promise<void> {
   const grid = setups.map((_, i) => (i === 0 ? o.aiCount : i - 1));
   session = new Session(world, setups, o.laps, 3, grid);
   session.style = { aggression: o.aiAggression, defense: o.aiDefense };
+  session.contactMode = o.contact;
   playerIndex = 0;
 }
 
@@ -175,6 +187,10 @@ ctx.onmessage = (e) => {
     case 'setAIStyle':
       if (options) options = { ...options, aiAggression: msg.aggression, aiDefense: msg.defense };
       if (session) session.style = { aggression: msg.aggression, defense: msg.defense };
+      break;
+    case 'setContact':
+      if (options) options = { ...options, contact: msg.contact };
+      if (session) session.contactMode = msg.contact;
       break;
     case 'setAIDifficulty':
       if (options) options = { ...options, aiDifficulty: msg.difficulty };

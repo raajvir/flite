@@ -10,7 +10,7 @@ import { SIM_DT } from '../sim/constants';
 import { carContacts } from '../sim/contacts';
 import { draftEffects, type DraftEffect } from '../sim/draft';
 import type { CarParams } from '../sim/params';
-import { newRaceCar, standings, updateRaceCar, type RaceCar } from '../sim/race';
+import { newRaceCar, SECTORS, standings, updateRaceCar, type RaceCar } from '../sim/race';
 import { step } from '../sim/step';
 import type { TrackWorld } from '../sim/trackWorld';
 import { initialState, NEUTRAL_INPUTS, type CarState, type DriverInputs } from '../sim/types';
@@ -41,10 +41,20 @@ export interface SessionCar {
  * Car states, race records and AI states are never mutated in place (each step makes
  * new objects), so a snapshot only needs references, not deep copies.
  */
+/** How cars interact: full contact, contact with collision assist, or ghosts (pass through, no tow). */
+export type ContactMode = 'full' | 'assisted' | 'ghost';
+
+/** Hot lap: a single car starting this far before the line, already at speed. */
+export interface FlyingStart {
+  distance: number;
+  speed: number;
+}
+
 export interface SessionSnapshot {
   t: number;
   steps: number;
   timing: { first: Map<number, number>; carCp: number[]; carCpTime: number[] };
+  traces: { trace: number[]; best: number[] | null; delta: number | null }[];
   cars: { state: CarState; race: RaceCar; inputs: DriverInputs; aiState: AIState | null }[];
 }
 
@@ -62,7 +72,14 @@ export interface RaceSnapshot {
     draft: number;
     /** Time behind the leader at the latest common checkpoint, s (0 for the leader) */
     gap: number;
+    sectors: (number | null)[];
+    lastSectors: (number | null)[];
+    bestSectors: (number | null)[];
+    /** Live time difference to this car's best lap at the same point (negative = faster), s */
+    delta: number | null;
   }[];
+  /** Fastest time anyone has done in each sector */
+  bestSectorsOverall: (number | null)[];
   /** Fastest lap of the race so far: car index and time */
   fastest: { car: number; time: number } | null;
 }
@@ -72,6 +89,9 @@ export class Session {
   private readonly plans = new Map<string, RacingPlan>();
   /** Racing personality shared by all AI cars. */
   style: AIStyle = { ...DEFAULT_STYLE };
+  contactMode: ContactMode = 'full';
+  /** Per car: times through the current lap at each checkpoint, the best lap's, and the live delta. */
+  private traces: { trace: number[]; best: number[] | null; delta: number | null }[] = [];
   /** Latest slipstream effect per car (for the HUD). */
   drafts: DraftEffect[] = [];
   /** Timing: first time any car reached each checkpoint, and each car's latest checkpoint + time. */
@@ -88,13 +108,16 @@ export class Session {
     readonly countdown = 3,
     /** Grid slot for each car (default: in setup order) */
     gridOrder?: number[],
+    /** Hot lap: start the (single) car before the line at speed instead of from the grid */
+    flying?: FlyingStart,
   ) {
     this.cars = setups.map((setup, i) => {
       const slot = gridOrder?.[i] ?? i;
-      const s = world.wrap(-GRID_BEHIND_LINE - slot * GRID_ROW_SPACING);
-      const d = (slot % 2 === 0 ? 1 : -1) * GRID_STAGGER;
+      const s = flying ? world.wrap(-flying.distance) : world.wrap(-GRID_BEHIND_LINE - slot * GRID_ROW_SPACING);
+      const d = flying ? world.at(world.raceD, s) : (slot % 2 === 0 ? 1 : -1) * GRID_STAGGER;
       const pos = world.point(s, d);
-      const state = initialState({ x: pos.x, y: world.heightAt(s, d).h, z: pos.z, yaw: world.headingAt(s) }, setup.params.idleRpm, setup.params.ersCapacity);
+      const state0 = initialState({ x: pos.x, y: world.heightAt(s, d).h, z: pos.z, yaw: world.headingAt(s) }, setup.params.idleRpm, setup.params.ersCapacity);
+      const state = flying ? { ...state0, u: flying.speed, gear: 5 } : state0;
       let ai: SessionCar['ai'] = null;
       if (setup.ai) ai = { plan: this.planFor(setup.params, setup.ai.skill), state: initialAIState() };
       return { state, params: setup.params, race: newRaceCar(world, pos.x, pos.z), inputs: { ...NEUTRAL_INPUTS }, ai };
@@ -136,7 +159,7 @@ export class Session {
           c.inputs = { ...NEUTRAL_INPUTS };
           continue;
         }
-        const others = cars.filter((_, j) => j !== i).map((o) => ({ car: o.state, race: o.race }));
+        const others = this.contactMode === 'ghost' ? [] : cars.filter((_, j) => j !== i).map((o) => ({ car: o.state, race: o.race }));
         const dec = aiDrive(c.state, c.race, c.ai.plan, c.params, c.ai.state, others, dt * AI_EVERY, this.style);
         c.inputs = dec.inputs;
         c.ai.state = dec.state;
@@ -145,15 +168,14 @@ export class Session {
     }
     for (const c of cars) if (!c.ai) c.inputs = go ? playerInputs : { ...NEUTRAL_INPUTS };
 
-    const ext = carContacts(
-      cars.map((c) => c.state),
-      cars.map((c) => c.params),
-      this.world.surfaces.contact,
-    );
-    this.drafts = draftEffects(
-      cars.map((c) => c.state),
-      cars.map((c) => c.params),
-    );
+    const ghost = this.contactMode === 'ghost';
+    const states = cars.map((c) => c.state);
+    const ext = ghost
+      ? states.map(() => ({ fx: 0, fy: 0, mz: 0 }))
+      : carContacts(states, cars.map((c) => c.params), this.world.surfaces.contact, this.contactMode === 'full' ? 0 : 1);
+    this.drafts = ghost
+      ? states.map(() => ({ strength: 0, dragScale: 1, liftScale: 1 }))
+      : draftEffects(states, cars.map((c) => c.params));
     for (let i = 0; i < cars.length; i++) {
       const c = cars[i]!;
       const d = this.drafts[i]!;
@@ -164,6 +186,7 @@ export class Session {
     if (this.steps % RACE_EVERY === 0) {
       cars.forEach((c, i) => {
         c.race = updateRaceCar(c.race, this.world, c.state.x, c.state.z, this.t, this.laps, c.state.y);
+        this.updateTrace(i, c.race);
         const cp = Math.floor(c.race.progress / CHECKPOINT);
         if (cp > (this.carCp[i] ?? -Infinity)) {
           this.carCp[i] = cp;
@@ -174,6 +197,24 @@ export class Session {
       // Forget checkpoints everyone has passed long ago.
       const oldest = Math.min(...this.carCp) - 4;
       for (const k of this.firstAt.keys()) if (k < oldest) this.firstAt.delete(k);
+    }
+  }
+
+  /** Live delta to the best lap: times through the lap at each checkpoint, compared like-for-like. */
+  private updateTrace(i: number, r: RaceCar): void {
+    const tr = (this.traces[i] ??= { trace: [], best: null, delta: null });
+    if (r.lap < 1) return;
+    const k = Math.floor(r.s / CHECKPOINT);
+    const elapsed = this.t - r.lapStart;
+    if (k < tr.trace.length - 1) {
+      // New lap started: keep the finished lap's trace if it was the best.
+      if (r.lastLap !== null && r.lastLap === r.bestLap) tr.best = tr.trace.slice();
+      tr.trace = [];
+    }
+    if (tr.trace[k] === undefined) {
+      tr.trace[k] = elapsed;
+      const b = tr.best?.[k];
+      tr.delta = b === undefined ? null : elapsed - b;
     }
   }
 
@@ -193,6 +234,7 @@ export class Session {
       t: this.t,
       steps: this.steps,
       timing: { first: new Map(this.firstAt), carCp: [...this.carCp], carCpTime: [...this.carCpTime] },
+      traces: this.traces.map((t) => ({ trace: t.trace.slice(), best: t.best, delta: t.delta })),
       cars: this.cars.map((c) => ({ state: c.state, race: c.race, inputs: c.inputs, aiState: c.ai?.state ?? null })),
     };
   }
@@ -203,6 +245,7 @@ export class Session {
     this.firstAt = new Map(snap.timing.first);
     this.carCp = [...snap.timing.carCp];
     this.carCpTime = [...snap.timing.carCpTime];
+    this.traces = snap.traces.map((t) => ({ trace: t.trace.slice(), best: t.best, delta: t.delta }));
     snap.cars.forEach((sc, i) => {
       const c = this.cars[i]!;
       c.state = sc.state;
@@ -240,8 +283,18 @@ export class Session {
           : this.carCp[i] !== undefined
             ? Math.max(0, this.carCpTime[i]! - (this.firstAt.get(this.carCp[i]!) ?? this.carCpTime[i]!))
             : 0,
+        sectors: c.race.sectors,
+        lastSectors: c.race.lastSectors,
+        bestSectors: c.race.bestSectors,
+        delta: this.traces[i]?.delta ?? null,
       })),
       fastest,
+      bestSectorsOverall: Array.from({ length: SECTORS }, (_, k) =>
+        this.cars.reduce<number | null>((m, c) => {
+          const v = c.race.bestSectors[k] ?? null;
+          return v === null ? m : m === null ? v : Math.min(m, v);
+        }, null),
+      ),
     };
   }
 }

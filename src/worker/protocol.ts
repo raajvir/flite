@@ -1,5 +1,5 @@
 /** Messages between the main thread and the sim worker. */
-import type { RaceSnapshot } from '../game/session';
+import type { ContactMode, RaceSnapshot } from '../game/session';
 import type { ParamOverrides, ParamSetName } from '../sim/params';
 import type { TrackName } from '../sim/tracks';
 import type { CarState, DriverInputs } from '../sim/types';
@@ -18,6 +18,9 @@ export interface StartOptions {
   /** 0..1 each */
   aiAggression: number;
   aiDefense: number;
+  contact: ContactMode;
+  /** Hot lap: just the player, flying start, unlimited laps */
+  hotlap: boolean;
 }
 
 export type ToWorker =
@@ -26,6 +29,7 @@ export type ToWorker =
   | { type: 'inputs'; inputs: DriverInputs }
   | { type: 'setAIDifficulty'; difficulty: number }
   | { type: 'setAIStyle'; aggression: number; defense: number }
+  | { type: 'setContact'; contact: ContactMode }
   /** Put the player back on track (R) */
   | { type: 'reset' }
   /** Restart the race from the grid (Shift+R) */

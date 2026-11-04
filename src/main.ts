@@ -6,6 +6,7 @@ import { DemoDriver } from './input/demoDriver';
 import { GamepadDriver } from './input/gamepad';
 import { KeyboardDriver } from './input/keyboard';
 import { TrackpadSteer } from './input/trackpad';
+import { DriverAssist } from './input/driverAssist';
 import { CarCamera } from './render/camera';
 import { createCarModel, type CarModel, type Livery } from './render/carModel';
 import { TireEffects } from './render/effects';
@@ -29,6 +30,8 @@ import type { FromWorker, ToWorker } from './worker/protocol';
 const CAR = carFile as unknown as CarFile;
 /** Only show the slipstream meter above this speed (it's meaningless on the grid), m/s. */
 const SLIPSTREAM_HUD_MIN_SPEED = 20;
+/** Opacity of ghost cars. */
+const GHOST_OPACITY = 0.35;
 /** Z jumps back this far. */
 const REWIND_SECONDS = 5;
 const query = new URLSearchParams(location.search);
@@ -38,6 +41,8 @@ const trackParam = query.get('track');
 const trackName: TrackName = trackParam === 'test' ? 'test' : isCircuit(trackParam) ? trackParam : 'monza';
 const aiCount = Math.max(0, Math.min(15, Number(query.get('ai') ?? 7)));
 const laps = Math.max(1, Number(query.get('laps') ?? 3));
+/** Hot lap: alone, flying start, unlimited laps (?hotlap=1). */
+const hotlap = query.get('hotlap') === '1';
 /**
  * Two-tone colour schemes in the style of a modern grid (colours only: no names,
  * logos or sponsors). Player first, then the AI field; repeats for big fields.
@@ -67,6 +72,8 @@ const panel = new TuningPanel({
   onRaceChange: (r) => {
     send({ type: 'setAIDifficulty', difficulty: r.aiDifficulty });
     send({ type: 'setAIStyle', aggression: r.aiAggression, defense: r.aiDefense });
+    send({ type: 'setContact', contact: r.contact });
+    applyGhosts(r.contact === 'ghost');
     if (brakingLine) brakingLine.visible = r.brakingLine;
   },
   onInputChange: (inp) => applyInput(inp),
@@ -87,8 +94,12 @@ if (scenery) world.scene.add(scenery.group);
 // Braking line: the AI's speed plan, built for the player's own car.
 const BRAKING_LINE_SKILL = 0.85; // guide comfortably inside the car's limit (conservative braking points)
 const brakingLine = track ? new BrakingLine(world.scene, track) : null;
+const assist = track ? new DriverAssist(track) : null;
 function refreshBrakingPlan(): void {
-  if (track && brakingLine) brakingLine.setPlan(new RacingPlan(track, params, BRAKING_LINE_SKILL), params);
+  if (!track) return;
+  const plan = new RacingPlan(track, params, BRAKING_LINE_SKILL);
+  brakingLine?.setPlan(plan, params);
+  if (assist) assist.plan = plan;
 }
 refreshBrakingPlan();
 if (brakingLine) brakingLine.visible = panel.race.brakingLine;
@@ -100,6 +111,10 @@ const keyboard = new KeyboardDriver();
 const gamepad = new GamepadDriver();
 const trackpad = new TrackpadSteer(world.renderer.domElement);
 function applyInput(inp: InputSettings): void {
+  if (assist) {
+    assist.steering = inp.steeringAssist;
+    assist.braking = inp.brakingAssist;
+  }
   trackpad.setEnabled(inp.trackpad);
   trackpad.range = inp.trackpadRange;
   trackpad.centering = inp.trackpadCentering;
@@ -143,6 +158,7 @@ function ensureViews(n: number): void {
     marker.visible = false;
     world.scene.add(marker);
     views.push({ model, interp: new SnapshotInterpolator(), effects: new TireEffects(world.scene, params, surfaces), marker, last: null, bodyRestY: model.body.position.y });
+    if (ghostsOn && i !== playerIndex) ghostify(model.root, true);
   }
 }
 
@@ -278,11 +294,12 @@ if (menuMode) {
   }
   showStartMenu(
     CIRCUITS.map((id) => ({ id, ...trackInfo(id) })),
-    { track: trackName, laps, ai: aiCount, difficulty: panel.race.aiDifficulty, mode: panel.activeMode.id },
+    { track: trackName, laps, ai: aiCount, difficulty: panel.race.aiDifficulty, mode: panel.activeMode.id, hotlap },
     panel.modes(),
     (c) => {
       panel.setAiDifficulty(c.difficulty);
       const q = new URLSearchParams({ track: c.track, laps: String(c.laps), ai: String(c.ai), mode: c.mode, go: '1' });
+      if (c.hotlap) q.set('hotlap', '1');
       location.search = q.toString();
     },
   );
@@ -321,6 +338,8 @@ if (!menuMode) send({
     aiDifficulty: panel.race.aiDifficulty,
     aiAggression: panel.race.aiAggression,
     aiDefense: panel.race.aiDefense,
+    contact: panel.race.contact,
+    hotlap: hotlap && trackName !== 'test',
   },
 });
 
@@ -355,6 +374,36 @@ window.addEventListener('resize', () => {
   world.renderer.setSize(window.innerWidth, window.innerHeight);
   fitDebugCam();
 });
+
+/** Ghost cars: everyone except the player drawn see-through. */
+let ghostsOn = panel.race.contact === 'ghost';
+const ghostMats = new Map<THREE.Material, THREE.Material>();
+function ghostify(root: THREE.Object3D, on: boolean): void {
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const solid = (o.userData.solidMat as THREE.Material | undefined) ?? (o.material as THREE.Material);
+    o.userData.solidMat = solid;
+    if (on) {
+      let g = ghostMats.get(solid);
+      if (!g) {
+        g = solid.clone();
+        g.transparent = true;
+        g.opacity = GHOST_OPACITY;
+        g.depthWrite = false;
+        ghostMats.set(solid, g);
+      }
+      o.material = g;
+      o.castShadow = false;
+    } else {
+      o.material = solid;
+      o.castShadow = true;
+    }
+  });
+}
+function applyGhosts(on: boolean): void {
+  ghostsOn = on;
+  views.forEach((v, i) => ghostify(v.model.root, on && i !== playerIndex));
+}
 
 function applyState(v: CarView, s: CarState): void {
   const m = v.model;
@@ -396,7 +445,9 @@ function frame(now: number): void {
   const latest = views[playerIndex]?.interp.latest() ?? null;
   const padSteer = trackpad.update(dt);
   const kbOrTrackpad = trackpad.enabled ? { ...kb, steer: padSteer } : kb;
-  const inputs = testDemo && latest ? testDemo.update(latest) : pad && gamepad.active ? pad : kbOrTrackpad;
+  const raw = testDemo && latest ? testDemo.update(latest) : pad && gamepad.active ? pad : kbOrTrackpad;
+  // Driving aids (steering/braking assist) act on the player's own inputs only.
+  const inputs = assist && latest && demoMode === null ? assist.apply(raw, latest) : raw;
   send({ type: 'inputs', inputs });
 
   let player: CarState | null = null;

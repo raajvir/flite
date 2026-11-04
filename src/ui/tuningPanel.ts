@@ -10,6 +10,7 @@
  */
 import { DIFFICULTY } from '../ai/difficulty';
 import { KEYBOARD_TUNING } from '../input/keyboard';
+import type { ContactMode } from '../game/session';
 import type { CarParams, NumberKey, ParamOverrides, ParamSetName } from '../sim/params';
 
 type KeyboardKey = keyof typeof KEYBOARD_TUNING;
@@ -134,6 +135,8 @@ export interface RaceSettings {
   /** 0..1 */
   aiDefense: number;
   brakingLine: boolean;
+  /** Car-to-car contact: full, assisted, or ghost cars */
+  contact: ContactMode;
 }
 
 export interface InputSettings {
@@ -142,10 +145,14 @@ export interface InputSettings {
   trackpadRange: number;
   /** Return-to-centre rate, per second (0 = stays where you leave it) */
   trackpadCentering: number;
+  /** 0..1: nudges you back when you're drifting off the track */
+  steeringAssist: number;
+  /** 0..1: brakes for you when you arrive at a corner too fast */
+  brakingAssist: number;
 }
 
-const RACE_DEFAULTS: RaceSettings = { aiDifficulty: DIFFICULTY.default, aiAggression: 0.5, aiDefense: 0.5, brakingLine: true };
-export const INPUT_DEFAULTS: InputSettings = { trackpad: false, trackpadRange: 260, trackpadCentering: 1.5 };
+const RACE_DEFAULTS: RaceSettings = { aiDifficulty: DIFFICULTY.default, aiAggression: 0.5, aiDefense: 0.5, brakingLine: true, contact: 'full' };
+export const INPUT_DEFAULTS: InputSettings = { trackpad: false, trackpadRange: 260, trackpadCentering: 1.5, steeringAssist: 0, brakingAssist: 0 };
 
 export interface CustomMode {
   id: string;
@@ -461,6 +468,15 @@ export class TuningPanel {
           this.save();
           this.opts.onRaceChange(this.race);
         }),
+        this.select('Car contact', 'Full = real collisions · Assisted = touches don\'t hook you · Ghost = cars pass through each other (no slipstream)', [
+          ['full', 'Full contact'],
+          ['assisted', 'Assisted'],
+          ['ghost', 'Ghost cars'],
+        ], race.contact, (v) => {
+          race.contact = v as ContactMode;
+          this.save();
+          this.opts.onRaceChange(this.race);
+        }),
         this.row('Braking line (L)', 'green = flat out, yellow = slow down soon, red = brake now', 0, 1, 1, race.brakingLine ? 1 : 0, 1, num(0), true, (v) => {
           race.brakingLine = v > 0;
           this.save();
@@ -476,7 +492,15 @@ export class TuningPanel {
       this.opts.onInputChange(this.input);
     };
     this.el.append(
-      this.group('Steering input', true, [
+      this.group('Driving aids & input', true, [
+        this.row('Steering assist', 'nudges you back when you are about to drift off the track (0 = off)', 0, 1, 0.05, inp.steeringAssist, 0, pct, false, (v) => {
+          inp.steeringAssist = v;
+          inputChanged();
+        }),
+        this.row('Braking assist', 'brakes for you when you arrive at a corner too fast (0 = off)', 0, 1, 0.05, inp.brakingAssist, 0, pct, false, (v) => {
+          inp.brakingAssist = v;
+          inputChanged();
+        }),
         this.row('Trackpad steering (K)', 'click the game to capture the pointer, slide one finger left/right to steer; keys still do throttle/brake', 0, 1, 1, inp.trackpad ? 1 : 0, 0, num(0), true, (v) => {
           inp.trackpad = v > 0;
           inputChanged();
@@ -602,6 +626,34 @@ export class TuningPanel {
       hEl.textContent = hint;
       row.append(hEl);
     }
+    return row;
+  }
+
+  private select(label: string, hint: string, options: [string, string][], value: string, set: (v: string) => void): HTMLDivElement {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const top = document.createElement('div');
+    top.className = 'top';
+    const name = document.createElement('span');
+    name.className = 'label';
+    name.textContent = label;
+    top.append(name);
+    const sel = document.createElement('select');
+    for (const [v, text] of options) {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = text;
+      o.selected = v === value;
+      sel.append(o);
+    }
+    sel.addEventListener('change', () => {
+      set(sel.value);
+      sel.blur();
+    });
+    const h = document.createElement('div');
+    h.className = 'hint';
+    h.textContent = hint;
+    row.append(top, sel, h);
     return row;
   }
 
