@@ -139,8 +139,9 @@
     "wallFriction": 0.4,
     "carStiffness": 4000000.0,
     "carDamping": 40000.0,
-    "carFriction": 0.25,
+    "carFriction": 0.08,
     "bumpLoadGain": 18,
-    "bumpFullSpeed": 5
+    "bumpFullSpeed": 5,
+    "carMaxForce": 25000
   }
 }

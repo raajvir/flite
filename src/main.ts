@@ -6,7 +6,7 @@ import { DemoDriver } from './input/demoDriver';
 import { GamepadDriver } from './input/gamepad';
 import { KeyboardDriver } from './input/keyboard';
 import { CarCamera } from './render/camera';
-import { createCarModel, type CarModel } from './render/carModel';
+import { createCarModel, type CarModel, type Livery } from './render/carModel';
 import { TireEffects } from './render/effects';
 import { SnapshotInterpolator } from './render/interpolation';
 import { createWorld, followSun } from './render/scene';
@@ -32,8 +32,22 @@ const aiCount = Math.max(0, Math.min(15, Number(query.get('ai') ?? 7)));
 const laps = Math.max(1, Number(query.get('laps') ?? 3));
 let paramSet: ParamSetName = query.get('set') === 'sim' ? 'sim' : 'feel';
 
-/** Body colours: player first, then the AI field. */
-const CAR_COLORS = [0xd8352a, 0x1f6fd6, 0xf2c418, 0x1fa34a, 0xf07c1b, 0x8e44c9, 0x16b8c4, 0xeeeeee, 0x333840, 0xe85a9b, 0x7a5230, 0x9ad11f, 0x2d3fa3, 0xc0392b, 0x5dade2, 0xa3a3a3];
+/**
+ * Two-tone colour schemes in the style of a modern grid (colours only: no names,
+ * logos or sponsors). Player first, then the AI field; repeats for big fields.
+ */
+const LIVERIES: Livery[] = [
+  { body: 0xd8102a, accent: 0xffd200 }, // red / yellow
+  { body: 0xff8000, accent: 0x1e88e5 }, // papaya / blue
+  { body: 0x1b2a5c, accent: 0xe21b4d }, // dark blue / red
+  { body: 0x2b2d31, accent: 0x00d2be }, // black / teal
+  { body: 0x0f5c4a, accent: 0xcedc00 }, // racing green / lime
+  { body: 0x1565c0, accent: 0xff6fb5 }, // blue / pink
+  { body: 0x0a2f6b, accent: 0x37bef0 }, // navy / light blue
+  { body: 0xf2f2f2, accent: 0xd22630 }, // white / red
+  { body: 0xf2f2f2, accent: 0x2a4bd7 }, // white / blue
+  { body: 0x111111, accent: 0x2ee84b }, // black / neon green
+];
 
 const defaults = { feel: loadCarParams(CAR, 'feel'), sim: loadCarParams(CAR, 'sim') };
 const panel = new TuningPanel({
@@ -92,6 +106,7 @@ interface CarView {
   effects: TireEffects;
   marker: THREE.Mesh;
   last: CarState | null;
+  bodyRestY: number;
 }
 const views: CarView[] = [];
 function ensureViews(n: number): void {
@@ -99,15 +114,15 @@ function ensureViews(n: number): void {
     const i = views.length;
     const model = createCarModel(
       { a: params.derived.a, b: params.derived.b, trackFront: params.trackFront, trackRear: params.trackRear, wheelRadius: params.wheelRadius },
-      CAR_COLORS[i % CAR_COLORS.length]!,
+      LIVERIES[i % LIVERIES.length]!,
     );
     world.scene.add(model.root);
     // Big marker above each car, only visible in the top-down debug view.
-    const marker = new THREE.Mesh(new THREE.ConeGeometry(22, 44, 4), new THREE.MeshBasicMaterial({ color: CAR_COLORS[i % CAR_COLORS.length]! }));
+    const marker = new THREE.Mesh(new THREE.ConeGeometry(22, 44, 4), new THREE.MeshBasicMaterial({ color: LIVERIES[i % LIVERIES.length]!.body }));
     marker.rotation.x = Math.PI;
     marker.visible = false;
     world.scene.add(marker);
-    views.push({ model, interp: new SnapshotInterpolator(), effects: new TireEffects(world.scene, params, surfaces), marker, last: null });
+    views.push({ model, interp: new SnapshotInterpolator(), effects: new TireEffects(world.scene, params, surfaces), marker, last: null, bodyRestY: model.body.position.y });
   }
 }
 
@@ -215,16 +230,19 @@ function applyState(v: CarView, s: CarState): void {
   m.root.position.set(s.x, s.y, s.z);
   // Yaw, then tilt to the ground slope (camber), in that order.
   m.root.rotation.set(Math.atan(s.slopeF), s.yaw, -Math.atan(s.slopeL), 'YXZ');
-  // Body on its suspension, plus a little shake from surface bumps.
-  const [fl, fr, rl, rr] = s.wheels;
-  const bumpFront = (fl.bump + fr.bump) / 2, bumpRear = (rl.bump + rr.bump) / 2;
-  const bumpLeft = (fl.bump + rl.bump) / 2, bumpRight = (fr.bump + rr.bump) / 2;
-  m.body.position.y = (bumpFront + bumpRear) / 2;
-  m.body.rotation.x = -s.pitch + (bumpFront - bumpRear) / 3;
-  m.body.rotation.z = -s.roll + (bumpRight - bumpLeft) / 1.6;
+  // Wheels ride up onto kerbs/bumps; the body sits on the average and pitches/rolls on its
+  // suspension (pivoting at axle height); the arms are re-aimed to stay attached to both.
+  const bumps = s.wheels.map((w) => w.bump);
+  m.pivots.forEach((pv, i) => (pv.position.y = m.wheelRestY + bumps[i]!));
+  const [bFL, bFR, bRL, bRR] = bumps as [number, number, number, number];
+  const front = (bFL + bFR) / 2, rear = (bRL + bRR) / 2, left = (bFL + bRL) / 2, right = (bFR + bRR) / 2;
+  m.body.position.y = v.bodyRestY + (front + rear) / 2;
+  m.body.rotation.x = -s.pitch + Math.atan2(front - rear, params.wheelbase);
+  m.body.rotation.z = -s.roll + Math.atan2(right - left, params.trackFront);
   m.steerPivots[0].rotation.y = s.steerAngle;
   m.steerPivots[1].rotation.y = s.steerAngle;
   m.wheels.forEach((w, i) => (w.rotation.x = -s.wheels[i]!.spin));
+  m.updateArms();
   v.marker.position.set(s.x, 60, s.z);
   v.marker.visible = debugView;
 }

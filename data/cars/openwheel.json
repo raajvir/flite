@@ -7,6 +7,7 @@
   },
   "sets": {
     "sim": {
+      "collisionAssist": { "value": 0, "unit": "-", "source": "design", "note": "0..1: how much of the spin and drag from car-to-car contact this car ignores" },
       "collisionRadius": { "value": 0.95, "unit": "m", "source": "estimate", "note": "car body = two circles of this radius" },
       "collisionOffset": { "value": 1.3, "unit": "m", "source": "estimate", "note": "circle centres this far ahead of / behind the CG" },
       "mass": { "value": 755, "unit": "kg", "source": "estimate", "note": "car + driver; publicly quoted F2-class minimum weight" },
@@ -96,6 +97,7 @@
       "absEnabled": { "value": 1, "unit": "bool", "source": "design" },
       "tcsEnabled": { "value": 1, "unit": "bool", "source": "design" },
       "stabilityAssist": { "value": 8000, "unit": "N*m*s/rad", "source": "design", "note": "feel: strong yaw damping" },
+      "collisionAssist": { "value": 0.7, "unit": "-", "source": "design", "note": "feel: touching wheels doesn't drag or spin you" },
       "rollStiffnessFront": { "value": 0.6, "unit": "-", "source": "design", "note": "feel: a touch more understeer, rear stays planted" }
     }
   }

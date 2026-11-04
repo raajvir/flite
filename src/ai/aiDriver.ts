@@ -58,6 +58,8 @@ export const AI_TUNING = {
   yieldSpeedDrop: 3, // m/s below the other car's speed when giving way
   yieldAheadMargin: 2, // m: the outside car only gives way if it isn't ahead by more than this
   yieldMinPlanFraction: 0.6, // giving way never drops below this share of the planned speed
+  concedeClearance: 3.2, // m: extra room given to a car that has drawn alongside and got ahead
+  concedeSpeedDrop: 2, // m/s below that car's speed while conceding
   ersAttackRange: 60, // m: boost when a car is this close ahead (attack) or behind (defend)
   ersMinCharge: 0.2, // share of battery kept back for attacking/defending
   ersFreeCharge: 0.75, // above this share, boost on any straight
@@ -242,7 +244,12 @@ export function aiDrive(
     if (gap < -L / 2) gap += L;
     if (Math.abs(gap) > t.alongsideLength) continue;
     const side = myD >= o.race.d ? 1 : -1; // which side of them we are on
-    const need = o.race.d + side * t.sideClearance;
+    // A car alongside that has got its nose ahead has won the position: concede it —
+    // more room and a small lift, so a pass that ends with touching wheels doesn't turn into
+    // a tug of war.
+    const conceding = gap > 0;
+    const need = o.race.d + side * (conceding ? t.concedeClearance : t.sideClearance);
+    if (conceding) speedCap = Math.min(speedCap, Math.max(o.car.u - t.concedeSpeedDrop, vPlanNow * t.yieldMinPlanFraction));
     // Side by side into a corner: the car on the outside gives way unless clearly ahead.
     // The corner is judged from the point midway between the two cars, so both cars agree on
     // who is inside (judging from each car's own position made both yield in chicanes).

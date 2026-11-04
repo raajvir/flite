@@ -1,8 +1,10 @@
 /**
  * Car-to-car contact. Each car is two circles (front and rear) of radius
  * collisionRadius. Overlapping circles push apart with a spring-damper force
- * plus a little sliding friction. Pure and deterministic; results are body-frame
- * ExternalForces fed into step().
+ * plus a little sliding friction, capped per contact. Each car's collisionAssist
+ * (0..1) scales down the twisting (yaw) and the dragging (friction) it receives, so a
+ * wheel-to-wheel touch nudges you instead of hooking you. Pure and deterministic;
+ * results are body-frame ExternalForces fed into step().
  */
 import type { CarParams } from './params';
 import type { ContactParams } from './surfaces';
@@ -53,18 +55,21 @@ export function carContacts(states: readonly CarState[], params: readonly CarPar
           const nx = dx / dist, nz = dz / dist;
           const rvx = b.vx - a.vx, rvz = b.vz - a.vz;
           const vn = rvx * nx + rvz * nz; // < 0 = approaching
-          const N = Math.max(0, c.carStiffness * overlap - c.carDamping * vn);
+          const N = Math.min(c.carMaxForce, Math.max(0, c.carStiffness * overlap - c.carDamping * vn));
           const tx = rvx - vn * nx, tz = rvz - vn * nz;
           const vt = Math.hypot(tx, tz);
           const f = vt > 0.2 ? (c.carFriction * N) / vt : (c.carFriction * N) / 0.2;
           // Force on b: +N n - friction along its relative sliding; on a: the opposite.
-          const Fx = N * nx - f * tx, Fz = N * nz - f * tz;
-          fx[j]! += Fx;
-          fz[j]! += Fz;
-          tq[j]! += b.rz * Fx - b.rx * Fz;
-          fx[i]! -= Fx;
-          fz[i]! -= Fz;
-          tq[i]! += a.rz * -Fx - a.rx * -Fz;
+          // Each car feels the friction and the twist scaled by (1 - its collision assist).
+          const ka = 1 - pi.collisionAssist, kb = 1 - pj.collisionAssist;
+          const Fbx = N * nx - f * tx * kb, Fbz = N * nz - f * tz * kb;
+          const Fax = -N * nx + f * tx * ka, Faz = -N * nz + f * tz * ka;
+          fx[j]! += Fbx;
+          fz[j]! += Fbz;
+          tq[j]! += (b.rz * Fbx - b.rx * Fbz) * kb;
+          fx[i]! += Fax;
+          fz[i]! += Faz;
+          tq[i]! += (a.rz * Fax - a.rx * Faz) * ka;
         }
       }
     }

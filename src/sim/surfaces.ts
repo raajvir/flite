@@ -23,6 +23,8 @@ export interface ContactParams {
   carStiffness: number;
   carDamping: number;
   carFriction: number;
+  /** Cap on the push from one circle-circle contact, N */
+  carMaxForce: number;
   bumpLoadGain: number;
   bumpFullSpeed: number;
 }
@@ -58,6 +60,7 @@ const CONTACT_KEYS: (keyof ContactParams)[] = [
   'carStiffness',
   'carDamping',
   'carFriction',
+  'carMaxForce',
   'bumpLoadGain',
   'bumpFullSpeed',
 ];

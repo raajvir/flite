@@ -135,3 +135,25 @@ describe('AI difficulty', () => {
     expect(lap(1.0)).toBeLessThan(lap(0.8) - 2);
   }, 120_000);
 });
+
+describe('collision assist', () => {
+  it('a car with collision assist gets twisted and dragged much less by contact', async () => {
+    const { loadCarParams } = await import('../../src/sim/params');
+    const { CAR } = await import('../sim/helpers');
+    const noAssist = loadCarParams(CAR, 'sim');
+    const assist = loadCarParams(CAR, 'feel');
+    // b overlaps a diagonally (front of a against rear of b), moving at different speeds.
+    const a = { ...initialState({ x: 0, y: 0, z: 0, yaw: 0 }), u: 60 };
+    const b = { ...initialState({ x: 1.6, y: 0, z: -2.2, yaw: 0 }), u: 50 };
+    const [fa] = carContacts([a, b], [noAssist, noAssist], surfaceTable().contact);
+    const [fa2] = carContacts([a, b], [assist, noAssist], surfaceTable().contact);
+    expect(Math.abs(fa2!.mz)).toBeLessThan(Math.abs(fa!.mz) * 0.5); // far less twist from the touch
+  });
+
+  it('a single contact can only push so hard', () => {
+    const a = initialState({ x: 0, y: 0, z: 0, yaw: 0 });
+    const b = initialState({ x: 0.2, y: 0, z: 0, yaw: 0 }); // deeply overlapping
+    const [fa] = carContacts([a, b], [feel, feel], surfaceTable().contact);
+    expect(Math.hypot(fa!.fx, fa!.fy)).toBeLessThanOrEqual(4 * surfaceTable().contact.carMaxForce + 1);
+  });
+});

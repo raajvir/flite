@@ -116,3 +116,14 @@ describe('a full AI race', () => {
     expect(lateContact * 0.05).toBeLessThan(1); // < 1 s of (light) contact in total after lap 1
   }, 120_000);
 });
+
+describe('AI concedes a position it has lost', () => {
+  it('backs off and gives room to a car alongside that has got ahead', () => {
+    const start = { ...initialAIState(), offset: -lineD };
+    const me = placed(S, 0, 70);
+    const passer = placed(S + 2, 2.0, 72); // alongside on our left, nose ahead
+    const res = think(me, [passer], 1, start);
+    expect(res.state.offset).toBeLessThan(start.offset - 0.5); // moved away (right)
+    expect(res.inputs.throttle).toBeLessThan(1); // lifted
+  });
+});
