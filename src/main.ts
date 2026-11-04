@@ -5,6 +5,7 @@ import { CarSound } from './audio/sound';
 import { DemoDriver } from './input/demoDriver';
 import { GamepadDriver } from './input/gamepad';
 import { KeyboardDriver } from './input/keyboard';
+import { TrackpadSteer } from './input/trackpad';
 import { CarCamera } from './render/camera';
 import { createCarModel, type CarModel, type Livery } from './render/carModel';
 import { TireEffects } from './render/effects';
@@ -14,11 +15,11 @@ import { buildTrackMesh } from './render/trackMesh';
 import { BrakingLine } from './render/brakingLine';
 import { buildScenery, type SceneryFile } from './render/scenery';
 import { RacingPlan } from './ai/aiDriver';
-import { loadCarParams, type CarFile, type ParamSetName } from './sim/params';
+import { loadCarParams, PARAM_SETS, type CarFile, type CarParams, type ParamSetName } from './sim/params';
 import { CIRCUITS, isCircuit, loadTrack, sceneryFor, surfaceTable, TRACKS, type TrackName } from './sim/tracks';
 import type { TrackWorld } from './sim/trackWorld';
 import type { CarState } from './sim/types';
-import { TuningPanel } from './ui/tuningPanel';
+import { TuningPanel, type InputSettings } from './ui/tuningPanel';
 import { Dash, type DashRace } from './ui/dash';
 import { PauseMenu, showStartMenu } from './ui/menu';
 import { RaceUi } from './ui/raceUi';
@@ -37,8 +38,6 @@ const trackParam = query.get('track');
 const trackName: TrackName = trackParam === 'test' ? 'test' : isCircuit(trackParam) ? trackParam : 'monza';
 const aiCount = Math.max(0, Math.min(15, Number(query.get('ai') ?? 7)));
 const laps = Math.max(1, Number(query.get('laps') ?? 3));
-let paramSet: ParamSetName = query.get('set') === 'sim' ? 'sim' : 'feel';
-
 /**
  * Two-tone colour schemes in the style of a modern grid (colours only: no names,
  * logos or sponsors). Player first, then the AI field; repeats for big fields.
@@ -56,12 +55,11 @@ const LIVERIES: Livery[] = [
   { body: 0x111111, accent: 0x2ee84b }, // black / neon green
 ];
 
-const defaults = { feel: loadCarParams(CAR, 'feel'), sim: loadCarParams(CAR, 'sim') };
+const defaults = Object.fromEntries(PARAM_SETS.map((k) => [k, loadCarParams(CAR, k)])) as Record<ParamSetName, CarParams>;
 const panel = new TuningPanel({
-  getSet: () => paramSet,
   getDefaults: (set) => defaults[set],
   onChange: (set, overrides) => {
-    if (set !== paramSet) return;
+    paramSet = set;
     params = loadCarParams(CAR, set, overrides);
     send({ type: 'setParams', paramSet: set, overrides });
     refreshBrakingPlan();
@@ -70,8 +68,13 @@ const panel = new TuningPanel({
     send({ type: 'setAIDifficulty', difficulty: r.aiDifficulty });
     if (brakingLine) brakingLine.visible = r.brakingLine;
   },
+  onInputChange: (inp) => applyInput(inp),
 });
-let params = loadCarParams(CAR, paramSet, panel.overrides(paramSet));
+// ?mode=<id> picks a drive mode (from the start menu); legacy ?set=sim still works.
+const modeParam = query.get('mode') ?? (query.get('set') === 'sim' ? 'sim' : null);
+if (modeParam) panel.selectSilently(modeParam);
+let paramSet: ParamSetName = panel.current().base;
+let params = loadCarParams(CAR, paramSet, panel.current().overrides);
 if (query.has('tuning')) panel.toggle();
 
 const world = createWorld(document.body, trackName === 'test');
@@ -94,6 +97,13 @@ const fog = world.scene.fog;
 const cam = new CarCamera(window.innerWidth / window.innerHeight);
 const keyboard = new KeyboardDriver();
 const gamepad = new GamepadDriver();
+const trackpad = new TrackpadSteer(world.renderer.domElement);
+function applyInput(inp: InputSettings): void {
+  trackpad.setEnabled(inp.trackpad);
+  trackpad.range = inp.trackpadRange;
+  trackpad.centering = inp.trackpadCentering;
+}
+applyInput(panel.input);
 const hud = document.getElementById('hud') as HTMLElement;
 const center = document.getElementById('center') as HTMLElement;
 const dash = new Dash();
@@ -240,6 +250,9 @@ const pauseMenu = new PauseMenu({
     location.search = q.toString();
   },
 });
+trackpad.onRelease = () => {
+  if (!menuMode && !paused) setPaused(true);
+};
 function setPaused(p: boolean): void {
   paused = p;
   send({ type: 'pause', paused });
@@ -264,10 +277,11 @@ if (menuMode) {
   }
   showStartMenu(
     CIRCUITS.map((id) => ({ id, name: TRACKS[id].name, world: () => loadTrack(id) })),
-    { track: trackName, laps, ai: aiCount, difficulty: panel.race.aiDifficulty, set: paramSet },
+    { track: trackName, laps, ai: aiCount, difficulty: panel.race.aiDifficulty, mode: panel.activeMode.id },
+    panel.modes(),
     (c) => {
       panel.setAiDifficulty(c.difficulty);
-      const q = new URLSearchParams({ track: c.track, laps: String(c.laps), ai: String(c.ai), set: c.set, go: '1' });
+      const q = new URLSearchParams({ track: c.track, laps: String(c.laps), ai: String(c.ai), mode: c.mode, go: '1' });
       location.search = q.toString();
     },
   );
@@ -299,7 +313,7 @@ if (!menuMode) send({
   options: {
     track: trackName,
     paramSet,
-    overrides: panel.overrides(paramSet),
+    overrides: panel.current().overrides,
     aiCount,
     laps,
     autopilot: trackName !== 'test' && demoMode !== null,
@@ -324,14 +338,8 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyV') debugView = !debugView;
   if (e.code === 'KeyB') mirrorOn = !mirrorOn;
   if (e.code === 'KeyL') panel.setBrakingLine(!panel.race.brakingLine);
-  if (e.code === 'KeyP') {
-    paramSet = paramSet === 'feel' ? 'sim' : 'feel';
-    const overrides = panel.overrides(paramSet);
-    params = loadCarParams(CAR, paramSet, overrides);
-    send({ type: 'setParams', paramSet, overrides });
-    refreshBrakingPlan();
-    panel.render();
-  }
+  if (e.code === 'KeyP') panel.cycleMode();
+  if (e.code === 'KeyK') panel.setTrackpad(!panel.input.trackpad);
   if (e.code === 'KeyT') {
     recording = !recording;
     send({ type: 'telemetry', recording });
@@ -383,7 +391,9 @@ function frame(now: number): void {
   const kb = keyboard.update(dt);
   const pad = gamepad.read();
   const latest = views[playerIndex]?.interp.latest() ?? null;
-  const inputs = testDemo && latest ? testDemo.update(latest) : pad && gamepad.active ? pad : kb;
+  const padSteer = trackpad.update(dt);
+  const kbOrTrackpad = trackpad.enabled ? { ...kb, steer: padSteer } : kb;
+  const inputs = testDemo && latest ? testDemo.update(latest) : pad && gamepad.active ? pad : kbOrTrackpad;
   send({ type: 'inputs', inputs });
 
   let player: CarState | null = null;
@@ -467,12 +477,12 @@ function frame(now: number): void {
       const c = race.countdown;
       center.textContent = c > 0 ? String(Math.ceil(c)) : race.t < race.countdown + 1 ? 'GO!' : '';
     }
-    dash.update(ps, params, surfaces, dashRace);
+    dash.update(ps, params, surfaces, dashRace, inputs.steer);
     raceUi.update(race, views.map((v) => v.interp.latest()), now / 1000);
     // Top-left: debug info only (the dashboard at the bottom has the driving info).
     hud.textContent =
       `fps ${fps.toFixed(0)}  worst ${worstShown.toFixed(1)} ms  sim ${simRate.toFixed(0)} Hz\n` +
-      `set ${paramSet} (P)  cam ${debugView ? 'map' : cam.mode}  ${demoMode !== null ? 'DEMO' : gamepad.active ? 'gamepad' : 'keyboard'}` +
+      `mode ${panel.activeMode.name} (P)  cam ${debugView ? 'map' : cam.mode}  ${demoMode !== null ? 'DEMO' : gamepad.active ? 'gamepad' : 'keyboard'}` +
       (recording ? '\n● REC telemetry (T to save)' : '');
   }
   requestAnimationFrame(frame);

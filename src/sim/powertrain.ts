@@ -32,7 +32,7 @@ export function wheelRpm(p: CarParams, gear: number, drivenOmega: number): numbe
 
 /** Engine torque (N*m at the crank) for a pedal position and rpm, incl. engine braking and the limiter. */
 export function engineTorque(p: CarParams, pedal: number, rpm: number): number {
-  const drive = pedal * engineTorqueAt(p.engineTorqueCurve, rpm);
+  const drive = pedal * engineTorqueAt(p.engineTorqueCurve, rpm) * p.powerScale;
   const brakeFrac = Math.min(1, Math.max(0, (rpm - p.idleRpm) / (p.revLimitRpm - p.idleRpm)));
   const engineBraking = (1 - pedal) * p.engineBrakeTorque * brakeFrac;
   let t = drive - engineBraking;

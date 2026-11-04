@@ -9,7 +9,8 @@
  */
 import { solveShapeB, type TireParams } from './tire';
 
-export type ParamSetName = 'feel' | 'sim';
+export type ParamSetName = 'feel' | 'sim' | 'arcade';
+export const PARAM_SETS: readonly ParamSetName[] = ['feel', 'sim', 'arcade'];
 
 export interface ParamEntry {
   value: unknown;
@@ -63,6 +64,7 @@ const NUMBER_KEYS = [
   'tireCurvatureE',
   'tireRelaxationLength',
   'tireLowSpeed',
+  'powerScale',
   'idleRpm',
   'revLimitRpm',
   'engineBrakeTorque',

@@ -296,6 +296,12 @@
         "source": "estimate",
         "note": "shape is a guess; scaled to ~460 kW (~620 hp) peak, the publicly quoted F2-class output"
       },
+      "powerScale": {
+        "value": 1.0,
+        "unit": "-",
+        "source": "design",
+        "note": "multiplier on the engine torque curve"
+      },
       "idleRpm": {
         "value": 4000,
         "unit": "rpm",
@@ -557,6 +563,141 @@
         "unit": "-",
         "source": "design",
         "note": "owner-tuned default"
+      }
+    },
+    "arcade": {
+      "inherits": "feel",
+      "tireMuX": {
+        "value": 2.6,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: very grippy"
+      },
+      "tireMuY": {
+        "value": 2.8,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: very grippy"
+      },
+      "tireShapeC": {
+        "value": 1.12,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: slides keep almost all their grip: easy to hold and catch"
+      },
+      "tirePeakSlipAngle": {
+        "value": 0.12,
+        "unit": "rad",
+        "source": "design",
+        "note": "arcade"
+      },
+      "tireLoadSensitivity": {
+        "value": 0.03,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: grip barely drops with load"
+      },
+      "cgHeight": {
+        "value": 0.2,
+        "unit": "m",
+        "source": "design",
+        "note": "arcade: little weight transfer"
+      },
+      "rollStiffnessFront": {
+        "value": 0.5,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: neutral balance"
+      },
+      "yawInertia": {
+        "value": 550,
+        "unit": "kg*m^2",
+        "source": "design",
+        "note": "arcade: snappy rotation"
+      },
+      "steerRate": {
+        "value": 5.0,
+        "unit": "rad/s",
+        "source": "design",
+        "note": "arcade: near-instant steering"
+      },
+      "steerSpeedFalloff": {
+        "value": 55,
+        "unit": "m/s",
+        "source": "design",
+        "note": "arcade: plenty of lock at speed"
+      },
+      "maxSteerAngle": {
+        "value": 0.36,
+        "unit": "rad",
+        "source": "design",
+        "note": "arcade"
+      },
+      "stabilityAssist": {
+        "value": 12000,
+        "unit": "N*m*s/rad",
+        "source": "design",
+        "note": "arcade: strong yaw control"
+      },
+      "stabilityGripFraction": {
+        "value": 0.95,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: lets you use nearly all the grip for turning"
+      },
+      "powerScale": {
+        "value": 1.3,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: punchier engine"
+      },
+      "brakeMaxTorque": {
+        "value": 20000,
+        "unit": "N*m",
+        "source": "design",
+        "note": "arcade: strong brakes"
+      },
+      "liftArea": {
+        "value": 4.0,
+        "unit": "m^2",
+        "source": "design",
+        "note": "arcade"
+      },
+      "dragArea": {
+        "value": 0.95,
+        "unit": "m^2",
+        "source": "design",
+        "note": "arcade"
+      },
+      "tcsSlip": {
+        "value": 1.0,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: arcade"
+      },
+      "bodyRollGradient": {
+        "value": 0.0008,
+        "unit": "rad/(m/s^2)",
+        "source": "design",
+        "note": "arcade: stiff, flat car"
+      },
+      "bodyPitchGradient": {
+        "value": 0.0007,
+        "unit": "rad/(m/s^2)",
+        "source": "design",
+        "note": "arcade"
+      },
+      "wheelRate": {
+        "value": 40000,
+        "unit": "N/m",
+        "source": "design",
+        "note": "arcade: kerbs upset the car less"
+      },
+      "collisionAssist": {
+        "value": 0.9,
+        "unit": "-",
+        "source": "design",
+        "note": "arcade: contact barely disturbs you"
       }
     }
   }

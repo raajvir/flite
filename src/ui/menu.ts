@@ -43,7 +43,8 @@ export interface MenuChoice {
   laps: number;
   ai: number;
   difficulty: number;
-  set: 'feel' | 'sim';
+  /** Drive mode id */
+  mode: string;
 }
 
 export interface CircuitInfo {
@@ -88,7 +89,12 @@ function outline(world: TrackWorld): SVGSVGElement {
   return svg;
 }
 
-export function showStartMenu(circuits: CircuitInfo[], initial: MenuChoice, onStart: (c: MenuChoice) => void): HTMLElement {
+export function showStartMenu(
+  circuits: CircuitInfo[],
+  initial: MenuChoice,
+  modes: { id: string; name: string; builtin: boolean }[],
+  onStart: (c: MenuChoice) => void,
+): HTMLElement {
   injectCss();
   const choice = { ...initial };
   const root = document.createElement('div');
@@ -168,7 +174,7 @@ export function showStartMenu(circuits: CircuitInfo[], initial: MenuChoice, onSt
     seg('Laps', [['1', 1], ['3', 3], ['5', 5], ['10', 10]], choice.laps, (v) => (choice.laps = Number(v))),
     slider('Opponents', 0, 15, 1, choice.ai, (v) => (v === 0 ? 'practice' : String(v)), (v) => (choice.ai = v)),
     slider('AI difficulty', 0, 1, 0.01, choice.difficulty, (v) => `${Math.round(v * 100)}%`, (v) => (choice.difficulty = v)),
-    seg('Handling', [['Feel', 'feel'], ['Sim', 'sim']], choice.set, (v) => (choice.set = v as 'feel' | 'sim')),
+    seg('Drive mode', modes.map((m) => [m.builtin ? m.name : `★ ${m.name}`, m.id] as [string, string]), choice.mode, (v) => (choice.mode = String(v))),
   );
   panel.append(opts);
 

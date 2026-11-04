@@ -29,6 +29,9 @@ const CSS = `
 #dash .bar > b { display: block; height: 100%; width: 0%; border-radius: 5px; }
 #dash .ers > b { background: linear-gradient(90deg, #2e9bff, #5ff0ff); }
 #dash .draft > b { background: #9ad11f; }
+#dash .steer { position: relative; width: 130px; height: 6px; border-radius: 3px; background: #2a3440; margin-top: 8px; }
+#dash .steer > b { position: absolute; top: 0; bottom: 0; background: #ffd21f; border-radius: 3px; }
+#dash .steer > i { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: #8fa1b3; }
 #dash .boost { color: #5ff0ff; font-weight: 800; text-shadow: 0 0 8px #5ff0ff; visibility: hidden; margin-left: 6px; }
 #dash .tires { display: grid; grid-template-columns: 22px 22px; gap: 4px 10px; margin-top: 4px; }
 #dash .tire { position: relative; width: 22px; height: 30px; border-radius: 5px; background: #2a3440;
@@ -74,6 +77,7 @@ export class Dash {
   private readonly ersText = el('span', 'mono');
   private readonly boost = el('span', 'boost', 'BOOST');
   private readonly draftBar = el('b');
+  private readonly steerBar = el('b');
   private readonly tires: HTMLElement[] = [];
   private readonly tireFill: HTMLElement[] = [];
   private readonly surf = el('div', 'surf');
@@ -96,7 +100,9 @@ export class Dash {
       this.rpm.push(seg);
       rpm.append(seg);
     }
-    center.append(row, rpm);
+    const steer = el('div', 'steer');
+    steer.append(el('i'), this.steerBar);
+    center.append(row, rpm, steer);
 
     const right = el('div', 'col');
     const ersLabel = el('div', 'label', 'ERS (shift)');
@@ -127,7 +133,11 @@ export class Dash {
     this.root.style.display = 'none';
   }
 
-  update(s: CarState, p: CarParams, surfaces: SurfaceTable, race: DashRace | null): void {
+  update(s: CarState, p: CarParams, surfaces: SurfaceTable, race: DashRace | null, steerInput = 0): void {
+    // Steering bar: centre = straight; fills left or right (our steer +1 = left).
+    const k = Math.max(-1, Math.min(1, steerInput));
+    this.steerBar.style.left = `${50 - Math.max(0, k) * 50}%`;
+    this.steerBar.style.width = `${Math.abs(k) * 50}%`;
     // Position and laps.
     if (race) {
       this.pos.textContent = `P${race.position}/${race.cars}`;

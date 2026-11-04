@@ -15,6 +15,14 @@ Opening the page shows the start menu: pick a circuit (Italian, Belgian, British
 test area), laps, number of opponents (0 = practice), AI difficulty and handling set, then Start.
 Esc opens the pause menu (resume, rewind, restart, settings, main menu, and the controls list).
 
+Drive modes: Default (the tuned feel set), Sim, Arcade (very grippy, snappy, drifty — an original
+tuning aiming for a PolyTrack-like feel), plus your own: tweak in the tuning panel (O) and
+"Save as new mode". P cycles modes while driving.
+
+Trackpad steering: K (or tuning panel → Steering input). Click the game to capture the pointer,
+slide one finger left/right to steer; keys still do throttle/brake/boost. Range and centring are
+adjustable. Esc releases the pointer and pauses.
+
 URL options:
 - `?track=test` — the flat cone test area instead of the circuit
 - `?ai=3` — number of AI opponents (0–15), `?laps=5` — race length

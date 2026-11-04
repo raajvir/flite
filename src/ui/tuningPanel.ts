@@ -2,7 +2,9 @@
  * Live tuning panel (press O). Sliders for car parameters and keyboard feel.
  *
  * - Changes apply instantly (sent to the sim worker as overrides).
- * - Values are remembered per handling set (feel / sim) in this browser.
+ * - Drive modes: built-in (Default, Sim, Arcade) keep your edits; you can also
+ *   save the current setup as your own named mode (car settings + keyboard feel).
+ * - Everything is remembered in this browser.
  * - "Copy settings" puts the changed values on the clipboard as JSON, ready to
  *   be baked into data/cars/*.json as new defaults.
  */
@@ -95,6 +97,7 @@ const GROUPS: { title: string; items: SliderSpec[] }[] = [
   {
     title: 'Engine & gearbox',
     items: [
+      { key: 'powerScale', label: 'Engine power', min: 0.6, max: 1.6, step: 0.01, show: pct },
       { key: 'upshiftRpm', label: 'Upshift rpm', min: 9000, max: 12400, step: 100, show: num(0) },
       { key: 'shiftTime', label: 'Shift time', min: 0, max: 0.2, step: 0.005, show: num(3), hint: 's of torque cut per shift' },
       { key: 'engineBrakeTorque', label: 'Engine braking', min: 0, max: 400, step: 10, show: num(0) },
@@ -119,7 +122,8 @@ const KEYBOARD_ITEMS: KeyboardSpec[] = [
   { key: 'brakeBuild', label: 'Brake build-up', min: 1, max: 20, step: 0.5 },
 ];
 
-const STORAGE_KEY = 'flite.tuning.v1';
+const STORAGE_KEY = 'flite.tuning.v2';
+const OLD_STORAGE_KEY = 'flite.tuning.v1';
 const KEYBOARD_DEFAULTS = { ...KEYBOARD_TUNING };
 
 export interface RaceSettings {
@@ -128,39 +132,89 @@ export interface RaceSettings {
   brakingLine: boolean;
 }
 
+export interface InputSettings {
+  trackpad: boolean;
+  /** Pixels of finger movement for full lock */
+  trackpadRange: number;
+  /** Return-to-centre rate, per second (0 = stays where you leave it) */
+  trackpadCentering: number;
+}
+
 const RACE_DEFAULTS: RaceSettings = { aiDifficulty: DIFFICULTY.default, brakingLine: true };
+export const INPUT_DEFAULTS: InputSettings = { trackpad: false, trackpadRange: 260, trackpadCentering: 1.5 };
+
+export interface CustomMode {
+  id: string;
+  name: string;
+  base: ParamSetName;
+  overrides: ParamOverrides;
+  keyboard: Partial<Record<KeyboardKey, number>>;
+}
+
+/** Built-in drive modes: one per parameter set. */
+export const BUILTIN_MODES: { id: ParamSetName; name: string }[] = [
+  { id: 'feel', name: 'Default' },
+  { id: 'sim', name: 'Sim' },
+  { id: 'arcade', name: 'Arcade' },
+];
 
 interface Stored {
-  feel: ParamOverrides;
-  sim: ParamOverrides;
+  /** Edits to the built-in modes */
+  builtin: Record<ParamSetName, ParamOverrides>;
+  custom: CustomMode[];
+  active: string;
+  /** Keyboard feel for the built-in modes (custom modes carry their own) */
   keyboard: Partial<Record<KeyboardKey, number>>;
   race: RaceSettings;
+  input: InputSettings;
+}
+
+function emptyStored(): Stored {
+  return { builtin: { feel: {}, sim: {}, arcade: {} }, custom: [], active: 'feel', keyboard: {}, race: { ...RACE_DEFAULTS }, input: { ...INPUT_DEFAULTS } };
 }
 
 function loadStored(): Stored {
+  const out = emptyStored();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = JSON.parse(raw) as Partial<Stored>;
-      return { feel: s.feel ?? {}, sim: s.sim ?? {}, keyboard: s.keyboard ?? {}, race: { ...RACE_DEFAULTS, ...s.race } };
+      return {
+        builtin: { ...out.builtin, ...s.builtin },
+        custom: s.custom ?? [],
+        active: s.active ?? 'feel',
+        keyboard: s.keyboard ?? {},
+        race: { ...RACE_DEFAULTS, ...s.race },
+        input: { ...INPUT_DEFAULTS, ...s.input },
+      };
+    }
+    // Carry over settings saved by the previous version of the panel.
+    const old = localStorage.getItem(OLD_STORAGE_KEY);
+    if (old) {
+      const o = JSON.parse(old) as { feel?: ParamOverrides; sim?: ParamOverrides; keyboard?: Stored['keyboard']; race?: RaceSettings };
+      out.builtin.feel = o.feel ?? {};
+      out.builtin.sim = o.sim ?? {};
+      out.keyboard = o.keyboard ?? {};
+      out.race = { ...RACE_DEFAULTS, ...o.race };
     }
   } catch {
     // storage blocked or corrupt: start clean
   }
-  return { feel: {}, sim: {}, keyboard: {}, race: { ...RACE_DEFAULTS } };
+  return out;
 }
 
 const CSS = `
 #tuning { position: fixed; top: 0; right: 0; bottom: 0; width: 330px; overflow-y: auto;
-  background: rgba(18, 24, 32, 0.88); color: #e8edf2; font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
-  padding: 10px 12px 24px; box-sizing: border-box; display: none; z-index: 10; }
+  background: rgba(18, 24, 32, 0.92); color: #e8edf2; font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+  padding: 10px 12px 24px; box-sizing: border-box; display: none; z-index: 30; }
 #tuning.open { display: block; }
 #tuning h2 { font-size: 14px; margin: 0 0 4px; }
 #tuning .sub { color: #9fb0c0; margin-bottom: 8px; }
-#tuning .buttons { display: flex; gap: 6px; margin-bottom: 8px; }
+#tuning .buttons { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
 #tuning button { flex: 1; background: #2c3a48; color: #e8edf2; border: 1px solid #44566a; border-radius: 4px;
   padding: 5px 6px; font: inherit; cursor: pointer; }
 #tuning button:hover { background: #38495b; }
+#tuning select { width: 100%; background: #2c3a48; color: #e8edf2; border: 1px solid #44566a; border-radius: 4px; padding: 5px; font: inherit; margin-bottom: 6px; }
 #tuning details { border-top: 1px solid #2f3d4b; padding: 4px 0; }
 #tuning summary { cursor: pointer; font-weight: 600; padding: 3px 0; }
 #tuning .row { margin: 6px 0 8px; }
@@ -174,14 +228,20 @@ const CSS = `
 `;
 
 export interface TuningPanelOptions {
-  /** Parameter set currently driven. */
-  getSet: () => ParamSetName;
-  /** Default (un-overridden) params for a set. */
+  /** Default (un-overridden) params for a parameter set. */
   getDefaults: (set: ParamSetName) => CarParams;
-  /** Called with the full override map whenever a car slider moves. */
+  /** Called with the base set and full override map whenever the car setup changes (mode switch or slider). */
   onChange: (set: ParamSetName, overrides: ParamOverrides) => void;
   /** Called when a race setting (AI difficulty, braking line) changes. */
   onRaceChange: (race: RaceSettings) => void;
+  /** Called when the steering-input settings change. */
+  onInputChange: (input: InputSettings) => void;
+}
+
+export interface ModeInfo {
+  id: string;
+  name: string;
+  builtin: boolean;
 }
 
 export class TuningPanel {
@@ -197,20 +257,117 @@ export class TuningPanel {
     this.el.id = 'tuning';
     document.body.appendChild(this.el);
     this.status = document.createElement('span');
-    Object.assign(KEYBOARD_TUNING, this.stored.keyboard);
+    if (!this.modes().some((m) => m.id === this.stored.active)) this.stored.active = 'feel';
+    this.applyKeyboard();
     this.render();
   }
 
-  get isOpen(): boolean {
-    return this.el.classList.contains('open');
+  // ---- Drive modes -------------------------------------------------------
+
+  modes(): ModeInfo[] {
+    return [
+      ...BUILTIN_MODES.map((m) => ({ id: m.id, name: m.name, builtin: true })),
+      ...this.stored.custom.map((m) => ({ id: m.id, name: m.name, builtin: false })),
+    ];
   }
 
-  toggle(): void {
-    this.el.classList.toggle('open');
+  get activeMode(): ModeInfo {
+    return this.modes().find((m) => m.id === this.stored.active)!;
   }
+
+  private customActive(): CustomMode | null {
+    return this.stored.custom.find((m) => m.id === this.stored.active) ?? null;
+  }
+
+  /** Base parameter set and overrides of the active mode. */
+  current(): { base: ParamSetName; overrides: ParamOverrides } {
+    const c = this.customActive();
+    if (c) return { base: c.base, overrides: { ...c.overrides } };
+    const base = this.stored.active as ParamSetName;
+    return { base, overrides: { ...this.stored.builtin[base] } };
+  }
+
+  setMode(id: string): void {
+    if (!this.modes().some((m) => m.id === id)) return;
+    this.stored.active = id;
+    this.save();
+    this.applyKeyboard();
+    const c = this.current();
+    this.opts.onChange(c.base, c.overrides);
+    this.render();
+  }
+
+  /** Pick a mode without notifying (used at start-up, before the simulation exists). */
+  selectSilently(id: string): void {
+    if (!this.modes().some((m) => m.id === id)) return;
+    this.stored.active = id;
+    this.save();
+    this.applyKeyboard();
+    this.render();
+  }
+
+  cycleMode(): void {
+    const all = this.modes();
+    const i = all.findIndex((m) => m.id === this.stored.active);
+    this.setMode(all[(i + 1) % all.length]!.id);
+  }
+
+  private saveAsNew(): void {
+    const name = window.prompt('Name for this drive mode:', `${this.activeMode.name} (mine)`);
+    if (!name) return;
+    const cur = this.current();
+    const id = `custom-${Date.now().toString(36)}`;
+    this.stored.custom.push({ id, name: name.slice(0, 40), base: cur.base, overrides: cur.overrides, keyboard: { ...this.keyboardOverrides() } });
+    this.stored.active = id;
+    this.save();
+    this.status.textContent = `Saved "${name}".`;
+    this.render();
+  }
+
+  private deleteActive(): void {
+    const c = this.customActive();
+    if (!c || !window.confirm(`Delete drive mode "${c.name}"?`)) return;
+    this.stored.custom = this.stored.custom.filter((m) => m !== c);
+    this.setMode('feel');
+  }
+
+  private resetActive(): void {
+    const c = this.customActive();
+    if (c) {
+      c.overrides = {};
+      c.keyboard = {};
+    } else {
+      this.stored.builtin[this.stored.active as ParamSetName] = {};
+      this.stored.keyboard = {};
+    }
+    this.save();
+    this.applyKeyboard();
+    const cur = this.current();
+    this.opts.onChange(cur.base, cur.overrides);
+    this.render();
+  }
+
+  private overridesRef(): ParamOverrides {
+    const c = this.customActive();
+    return c ? c.overrides : this.stored.builtin[this.stored.active as ParamSetName];
+  }
+
+  private keyboardOverrides(): Partial<Record<KeyboardKey, number>> {
+    return this.customActive()?.keyboard ?? this.stored.keyboard;
+  }
+
+  private applyKeyboard(): void {
+    Object.assign(KEYBOARD_TUNING, KEYBOARD_DEFAULTS, this.keyboardOverrides());
+  }
+
+  // ---- Race and input settings -------------------------------------------
 
   get race(): RaceSettings {
     return { ...this.stored.race };
+  }
+
+  get input(): InputSettings {
+    return { ...this.stored.input };
   }
 
   setAiDifficulty(v: number): void {
@@ -225,92 +382,147 @@ export class TuningPanel {
     this.render();
   }
 
-  overrides(set: ParamSetName): ParamOverrides {
-    return { ...this.stored[set] };
+  setTrackpad(on: boolean): void {
+    this.stored.input.trackpad = on;
+    this.save();
+    this.opts.onInputChange(this.input);
+    this.render();
   }
 
-  /** Re-draw (e.g. after switching feel/sim). */
+  get isOpen(): boolean {
+    return this.el.classList.contains('open');
+  }
+
+  toggle(): void {
+    this.el.classList.toggle('open');
+  }
+
+  // ---- Rendering -----------------------------------------------------------
+
   render(): void {
-    const set = this.opts.getSet();
-    const defaults = this.opts.getDefaults(set);
-    const ov = this.stored[set];
+    const mode = this.activeMode;
+    const { base } = this.current();
+    const defaults = this.opts.getDefaults(base);
+    const ov = this.overridesRef();
     this.el.replaceChildren();
 
     const h = document.createElement('h2');
-    h.textContent = `Tuning — ${set} set`;
+    h.textContent = 'Tuning';
     const sub = document.createElement('div');
     sub.className = 'sub';
-    sub.textContent = 'O to close · P switches feel/sim · double-click a name to reset it · changed values are yellow';
+    sub.textContent = 'O to close · P cycles drive modes · double-click a name to reset it · changed values are yellow';
+    this.el.append(h, sub);
+
+    // Drive mode picker + actions.
+    const select = document.createElement('select');
+    for (const m of this.modes()) {
+      const o = document.createElement('option');
+      o.value = m.id;
+      o.textContent = m.builtin ? m.name : `★ ${m.name}`;
+      o.selected = m.id === mode.id;
+      select.append(o);
+    }
+    select.addEventListener('change', () => {
+      this.setMode(select.value);
+      select.blur();
+    });
     const buttons = document.createElement('div');
     buttons.className = 'buttons';
-    buttons.append(
-      this.button('Copy settings', () => void this.copy()),
-      this.button(`Reset ${set}`, () => {
-        this.stored[set] = {};
-        this.save();
-        this.opts.onChange(set, {});
-        this.render();
-      }),
-    );
-    this.el.append(h, sub, buttons, this.status);
+    buttons.append(this.button('Save as new mode', () => this.saveAsNew()), this.button(`Reset ${mode.name}`, () => this.resetActive()));
+    if (!mode.builtin) buttons.append(this.button('Delete mode', () => this.deleteActive()));
+    buttons.append(this.button('Copy settings', () => void this.copy()));
+    const modeLabel = document.createElement('div');
+    modeLabel.className = 'hint';
+    modeLabel.textContent = mode.builtin
+      ? 'Built-in mode: your edits are kept. Save as new mode to keep several setups.'
+      : `Your mode (based on ${BUILTIN_MODES.find((b) => b.id === base)?.name}). Edits save automatically.`;
+    this.el.append(select, modeLabel, buttons, this.status);
 
-    // Race settings (both handling sets).
-    const rd = document.createElement('details');
-    rd.open = true;
-    const rs = document.createElement('summary');
-    rs.textContent = 'Race';
-    rd.append(rs);
+    // Race settings.
     const race = this.stored.race;
-    rd.append(
-      this.row('AI difficulty', 'how much of the grip the AI dares to use; applies immediately', 0, 1, 0.01, race.aiDifficulty, RACE_DEFAULTS.aiDifficulty, pct, false, (v) => {
-        race.aiDifficulty = v;
-        this.save();
-        this.opts.onRaceChange(this.race);
-      }),
-      this.row('Braking line (L)', 'green = flat out, yellow = slow down soon, red = brake now', 0, 1, 1, race.brakingLine ? 1 : 0, RACE_DEFAULTS.brakingLine ? 1 : 0, num(0), true, (v) => {
-        race.brakingLine = v > 0;
-        this.save();
-        this.opts.onRaceChange(this.race);
-      }),
-    );
-    this.el.append(rd);
-
-    for (const g of GROUPS) {
-      const d = document.createElement('details');
-      d.open = g.title === 'Assists';
-      const s = document.createElement('summary');
-      s.textContent = g.title;
-      d.append(s);
-      for (const spec of g.items) {
-        const def = defaults[spec.key];
-        d.append(
-          this.row(spec.label, spec.hint, spec.min, spec.max, spec.step, ov[spec.key] ?? def, def, spec.show ?? num(3), !!spec.toggle, (v) => {
-            if (v === def) delete ov[spec.key];
-            else ov[spec.key] = v;
-            this.save();
-            this.opts.onChange(set, { ...ov });
-          }),
-        );
-      }
-      this.el.append(d);
-    }
-
-    const kd = document.createElement('details');
-    const ks = document.createElement('summary');
-    ks.textContent = 'Keyboard feel (both sets)';
-    kd.append(ks);
-    for (const spec of KEYBOARD_ITEMS) {
-      const def = KEYBOARD_DEFAULTS[spec.key];
-      kd.append(
-        this.row(spec.label, spec.hint, spec.min, spec.max, spec.step, KEYBOARD_TUNING[spec.key], def, num(1), false, (v) => {
-          KEYBOARD_TUNING[spec.key] = v;
-          if (v === def) delete this.stored.keyboard[spec.key];
-          else this.stored.keyboard[spec.key] = v;
+    this.el.append(
+      this.group('Race', true, [
+        this.row('AI difficulty', 'how much of the grip the AI dares to use; applies immediately', 0, 1, 0.01, race.aiDifficulty, RACE_DEFAULTS.aiDifficulty, pct, false, (v) => {
+          race.aiDifficulty = v;
           this.save();
+          this.opts.onRaceChange(this.race);
         }),
+        this.row('Braking line (L)', 'green = flat out, yellow = slow down soon, red = brake now', 0, 1, 1, race.brakingLine ? 1 : 0, 1, num(0), true, (v) => {
+          race.brakingLine = v > 0;
+          this.save();
+          this.opts.onRaceChange(this.race);
+        }),
+      ]),
+    );
+
+    // Steering input.
+    const inp = this.stored.input;
+    const inputChanged = () => {
+      this.save();
+      this.opts.onInputChange(this.input);
+    };
+    this.el.append(
+      this.group('Steering input', true, [
+        this.row('Trackpad steering (K)', 'click the game to capture the pointer, slide one finger left/right to steer; keys still do throttle/brake', 0, 1, 1, inp.trackpad ? 1 : 0, 0, num(0), true, (v) => {
+          inp.trackpad = v > 0;
+          inputChanged();
+        }),
+        this.row('Trackpad range', 'finger travel for full lock (smaller = more sensitive)', 80, 600, 10, inp.trackpadRange, INPUT_DEFAULTS.trackpadRange, (v) => `${v.toFixed(0)} px`, false, (v) => {
+          inp.trackpadRange = v;
+          inputChanged();
+        }),
+        this.row('Trackpad centring', 'how quickly steering drifts back to straight when you stop moving (0 = stays put)', 0, 6, 0.1, inp.trackpadCentering, INPUT_DEFAULTS.trackpadCentering, num(1), false, (v) => {
+          inp.trackpadCentering = v;
+          inputChanged();
+        }),
+      ]),
+    );
+
+    // Car parameter groups (edit the active mode).
+    for (const g of GROUPS) {
+      this.el.append(
+        this.group(
+          g.title,
+          g.title === 'Assists',
+          g.items.map((spec) => {
+            const def = defaults[spec.key];
+            return this.row(spec.label, spec.hint, spec.min, spec.max, spec.step, ov[spec.key] ?? def, def, spec.show ?? num(3), !!spec.toggle, (v) => {
+              if (v === def) delete ov[spec.key];
+              else ov[spec.key] = v;
+              this.save();
+              this.opts.onChange(base, { ...ov });
+            });
+          }),
+        ),
       );
     }
-    this.el.append(kd);
+
+    // Keyboard feel (per mode for custom modes).
+    const kb = this.keyboardOverrides();
+    this.el.append(
+      this.group(
+        'Keyboard feel',
+        false,
+        KEYBOARD_ITEMS.map((spec) => {
+          const def = KEYBOARD_DEFAULTS[spec.key];
+          return this.row(spec.label, spec.hint, spec.min, spec.max, spec.step, KEYBOARD_TUNING[spec.key], def, num(1), false, (v) => {
+            KEYBOARD_TUNING[spec.key] = v;
+            if (v === def) delete kb[spec.key];
+            else kb[spec.key] = v;
+            this.save();
+          });
+        }),
+      ),
+    );
+  }
+
+  private group(title: string, open: boolean, rows: HTMLElement[]): HTMLDetailsElement {
+    const d = document.createElement('details');
+    d.open = open;
+    const s = document.createElement('summary');
+    s.textContent = title;
+    d.append(s, ...rows);
+    return d;
   }
 
   private row(
@@ -399,7 +611,7 @@ export class TuningPanel {
 
   private async copy(): Promise<void> {
     const text = JSON.stringify(
-      { feel: this.stored.feel, sim: this.stored.sim, keyboard: this.stored.keyboard, race: this.stored.race },
+      { mode: this.activeMode.name, ...this.current(), keyboard: this.keyboardOverrides(), race: this.stored.race, input: this.stored.input },
       null,
       2,
     );
