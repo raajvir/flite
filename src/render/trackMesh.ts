@@ -16,6 +16,7 @@ import { Builder } from './meshBuilder';
 const STEP = 2; // m between cross-sections along the track
 const VERGE_BEYOND_WALL = 40; // m of grass drawn outside the walls
 const OVERLAY_LIFT = 0.02; // m
+const KERB_LIFT = 0.012; // m: kerbs drawn a hair above the road so their inner edge doesn't flicker
 const GROUND_DROP = 0.25; // m: infinite ground plane sits this far below
 const GROUND_SIZE = 8000; // m
 
@@ -111,8 +112,8 @@ export function buildTrackMesh(world: TrackWorld): THREE.Group {
   for (const band of world.layout.bands as SurfaceBand[]) {
     const s = sf[band.surface]!;
     const left = band.side === 'left';
-    if (s.name === 'kerb_sausage') {
-      sausage(base, world, band, s, P, D, left, stripes(s));
+    if (s.profile !== 'none') {
+      kerbMesh(base, world, band, s, D, left, stripes(s));
       continue;
     }
     strip(overlay, band.s_start, band.s_end, left, () => band.offset, () => band.offset + band.width, stripes(s), OVERLAY_LIFT);
@@ -157,29 +158,35 @@ export function buildTrackMesh(world: TrackWorld): THREE.Group {
   return group;
 }
 
-/** Raised sausage kerb: a striped box along the band. */
-function sausage(
+/**
+ * Kerb with its real cross-section (same profile the physics uses): a ramp with a
+ * rounded outer edge for flat kerbs, a hump for sausage kerbs, tapering in at both ends.
+ */
+function kerbMesh(
   b: Builder,
   world: TrackWorld,
   band: SurfaceBand,
   s: Surface,
-  P: (s: number, d: number, lift?: number) => number[],
   D: (s: number, left: boolean, off: number) => number,
   left: boolean,
   color: (s: number) => string,
 ): void {
-  const h = s.height ?? 0.1;
+  const us = s.profile === 'ramp' ? [0, 0.85, 1] : [0, 0.15, 0.35, 0.5, 0.65, 0.85, 1];
+  const point = (sv: number, u: number): number[] => {
+    const d = D(sv, left, band.offset + u * band.width);
+    const p = world.point(sv, d);
+    const info = world.surfaceInfo(sv, d);
+    return [p.x, world.heightAt(sv, d).h + info.kerb + KERB_LIFT, p.z];
+  };
   const ss = samples(world, band.s_start, band.s_end);
   for (let k = 0; k < ss.length - 1; k++) {
     const a = ss[k]!, c = ss[k + 1]!;
-    const ai = P(a, D(a, left, band.offset), h), ao = P(a, D(a, left, band.offset + band.width), h);
-    const ci = P(c, D(c, left, band.offset), h), co = P(c, D(c, left, band.offset + band.width), h);
     const col = color((a + c) / 2);
-    if (left) b.quad(ai, ci, co, ao, col);
-    else b.quad(ao, co, ci, ai, col);
-    // Inner and outer faces.
-    const down = (p: number[]) => [p[0]!, p[1]! - h, p[2]!];
-    b.quad(down(ai), down(ci), ci, ai, col);
-    b.quad(ao, co, down(co), down(ao), col);
+    for (let j = 0; j < us.length - 1; j++) {
+      const ai = point(a, us[j]! + 1e-4), ao = point(a, us[j + 1]! - 1e-4);
+      const ci = point(c, us[j]! + 1e-4), co = point(c, us[j + 1]! - 1e-4);
+      if (left) b.quad(ai, ci, co, ao, col);
+      else b.quad(ao, co, ci, ai, col);
+    }
   }
 }

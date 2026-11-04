@@ -24,6 +24,9 @@
       "suspensionFrequency": { "value": 3.6, "unit": "Hz", "source": "estimate", "note": "body pitch/roll natural frequency" },
       "suspensionDamping": { "value": 0.6, "unit": "-", "source": "estimate", "note": "damping ratio; < 1 gives a small overshoot" },
 
+      "wheelRate": { "value": 60000, "unit": "N/m", "source": "estimate", "note": "suspension + tire vertical stiffness per wheel: a wheel pushed up by a kerb loads up by this much per metre" },
+      "wheelDamping": { "value": 2000, "unit": "N*s/m", "source": "estimate", "note": "damping per wheel: hitting a kerb fast gives a load spike" },
+      "maxWheelLoadSwing": { "value": 4, "unit": "-", "source": "estimate", "note": "kerb/bump load change is capped at this many times the wheel's static load" },
       "dragArea": { "value": 1.05, "unit": "m^2", "source": "estimate", "note": "Cd * frontal area (F2-class guess)" },
       "liftArea": { "value": 3.3, "unit": "m^2", "source": "estimate", "note": "Cl * frontal area (downforce, F2-class guess: less than a top-tier car)" },
       "draftLength": { "value": 40, "unit": "m", "source": "estimate", "note": "slipstream reaches this far behind a car" },

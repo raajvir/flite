@@ -27,8 +27,8 @@ import { FlatWorld, type GroundQuery, type World } from './world';
 export const FLAT_ASPHALT: World = new FlatWorld(loadSurfaces(surfacesFile as unknown as SurfacesFile));
 
 const TWO_PI = Math.PI * 2;
-/** Surface bumps can swing a wheel's load by at most this fraction either way. */
-const BUMP_MAX_LOAD_SWING = 0.9;
+/** Cap on how fast a wheel can be pushed up/down by the ground, m/s (also stops a spike on the first step after a reset). */
+const MAX_WHEEL_RISE_RATE = 5;
 /** Below this sliding speed along a wall, friction is scaled down linearly (avoids jitter), m/s. */
 const WALL_SLIP_SPEED = 0.5;
 /** Finite-difference step for the tire's longitudinal stiffness. */
@@ -162,14 +162,22 @@ export function step(
     world.query(s.x + xi * fwdX + yi * leftX, s.z + xi * fwdZ + yi * leftZ),
   );
   const loads = wheelLoads(p, s.u, s.axFiltered, s.ayFiltered, ext.liftScale ?? 1);
-  const bumpFade = Math.min(1, Math.abs(s.u) / contact.bumpFullSpeed);
+  // Wheel height above the road: kerb profile + surface roughness.
   const bumps = ground.map((g, i) => {
     const { xi, yi } = geom[i]!;
     const wx = s.x + xi * fwdX + yi * leftX, wz = s.z + xi * fwdZ + yi * leftZ;
-    return g.surface.bumpAmplitude * bumpNoise(wx, wz, g.surface.bumpWavelength);
+    return g.kerb + g.surface.bumpAmplitude * bumpNoise(wx, wz, g.surface.bumpWavelength);
   });
+  // A wheel pushed up relative to the others compresses its spring (more load) and the
+  // others extend (less load); rising fast adds a damper spike. Loads can drop to zero:
+  // that's a wheel in the air, and how sausage kerbs throw the car.
+  const rates = bumps.map((h, i) => clamp((h - s.wheels[i]!.bump) / dt, -MAX_WHEEL_RISE_RATE, MAX_WHEEL_RISE_RATE));
+  const meanH = (bumps[0]! + bumps[1]! + bumps[2]! + bumps[3]!) / 4;
+  const meanR = (rates[0]! + rates[1]! + rates[2]! + rates[3]!) / 4;
   for (let i = 0; i < 4; i++) {
-    loads[i] = loads[i]! * (1 + clamp(contact.bumpLoadGain * bumps[i]! * bumpFade, -BUMP_MAX_LOAD_SWING, BUMP_MAX_LOAD_SWING));
+    const swing = p.wheelRate * (bumps[i]! - meanH) + p.wheelDamping * (rates[i]! - meanR);
+    const cap = p.maxWheelLoadSwing * loads[i]!;
+    loads[i] = Math.max(0, loads[i]! + clamp(swing, -cap, cap));
   }
 
   // --- 4 & 5. Tires and wheel spin.
@@ -218,6 +226,16 @@ export function step(
     sumFx += fxb;
     sumFy += fyb;
     sumMz += xi * fyb - yi * fxb;
+
+    // A kerb tilts the surface under this wheel relative to the road: the contact pushes
+    // back along that tilted normal, -load * kerb gradient. Kerbs angled up towards the
+    // outside therefore push the wheel back onto the track. (Smooth road camber/slope is
+    // gravity on the whole car, applied at the CG below.)
+    const gfx = -Fz * (g.kerbGradX * fwdX + g.kerbGradZ * fwdZ);
+    const gfy = -Fz * (g.kerbGradX * leftX + g.kerbGradZ * leftZ);
+    sumFx += gfx;
+    sumFy += gfy;
+    sumMz += xi * gfy - yi * gfx;
 
     // Wheel spin, linearly implicit: the tire force rises as the wheel speeds up
     // (dFx/domega = dFx/dkappa * R / denom), so we fold that stiffness into an
@@ -305,6 +323,7 @@ export function step(
   }
   const slopeF = gX * fwdX + gZ * fwdZ;
   const slopeL = gX * leftX + gZ * leftZ;
+  // Road camber/slope: gravity pulls the car downhill (acts at the CG; not felt as load transfer).
   const axGravity = -GRAVITY * slopeF;
   const ayGravity = -GRAVITY * slopeL;
   const u = s.u + (ax + axGravity + s.v * s.yawRate) * dt;

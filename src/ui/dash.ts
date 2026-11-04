@@ -116,6 +116,10 @@ export class Dash {
     document.body.appendChild(this.root);
   }
 
+  hide(): void {
+    this.root.style.display = 'none';
+  }
+
   update(s: CarState, p: CarParams, surfaces: SurfaceTable, race: DashRace | null): void {
     // Position and laps.
     if (race) {

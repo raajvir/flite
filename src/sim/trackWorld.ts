@@ -14,7 +14,7 @@
  *
  * Pure and deterministic: built once from JSON, then read-only.
  */
-import type { Surface, SurfaceTable } from './surfaces';
+import { profileAt, type Surface, type SurfaceTable } from './surfaces';
 import type { GroundQuery, World } from './world';
 
 export interface TrackData {
@@ -272,22 +272,45 @@ export class TrackWorld implements World {
 
   /** Surface at track coordinates. */
   surfaceAt(s: number, d: number): Surface {
+    return this.surfaceInfo(s, d).surface;
+  }
+
+  /**
+   * Surface plus kerb profile at track coordinates: kerb height on top of the road and its
+   * slope across the track (dh/dd). Kerb profiles taper in over contact.kerbTaper at each end.
+   */
+  surfaceInfo(s: number, d: number): { surface: Surface; kerb: number; kerbDhdd: number } {
     const left = d >= 0;
     const edge = this.at(left ? this.wl : this.wr, s);
     const off = Math.abs(d) - edge;
-    if (off >= this.at(left ? this.wallL : this.wallR, s)) return this.surfaces.byName.wall!;
+    if (off >= this.at(left ? this.wallL : this.wallR, s)) return { surface: this.surfaces.byName.wall!, kerb: 0, kerbDhdd: 0 };
     const bins = left ? this.bandBins.left : this.bandBins.right;
     const bin = bins[Math.floor(this.wrap(s) / BAND_BIN) % bins.length]!;
     for (let k = bin.length - 1; k >= 0; k--) {
       const b = this.bands[bin[k]!]!;
-      if (off >= b.offset && off < b.offset + b.width && this.inBand(b, s)) return b.surf;
+      if (off >= b.offset && off < b.offset + b.width && this.inBand(b, s)) {
+        if (b.surf.profile === 'none') return { surface: b.surf, kerb: 0, kerbDhdd: 0 };
+        const u = (off - b.offset) / b.width;
+        const pr = profileAt(b.surf, u);
+        const taper = this.bandTaper(b, s);
+        // off grows with |d|, so dh/dd = sign(d) * dh/doff.
+        return { surface: b.surf, kerb: pr.h * taper, kerbDhdd: (left ? 1 : -1) * (pr.dhdu / b.width) * taper };
+      }
     }
     if (off < 0) {
-      return off > -this.layout.edgeLine.width
-        ? this.surfaces.byName[this.layout.edgeLine.surface]!
-        : this.surfaces.byName.asphalt!;
+      const surface =
+        off > -this.layout.edgeLine.width ? this.surfaces.byName[this.layout.edgeLine.surface]! : this.surfaces.byName.asphalt!;
+      return { surface, kerb: 0, kerbDhdd: 0 };
     }
-    return this.surfaces.byName[this.layout.verge]!;
+    return { surface: this.surfaces.byName[this.layout.verge]!, kerb: 0, kerbDhdd: 0 };
+  }
+
+  /** 0..1 ramp-in of a band's profile near its ends. */
+  bandTaper(b: SurfaceBand, s: number): number {
+    const T = this.surfaces.contact.kerbTaper;
+    const into = this.wrap(s - b.s_start);
+    const left = this.wrap(b.s_end - s);
+    return Math.max(0, Math.min(1, into / T, left / T));
   }
 
   /** Ground height and its derivative across the track (dh/dd). */
@@ -318,11 +341,15 @@ export class TrackWorld implements World {
     const off = Math.abs(p.d) - this.at(left ? this.wl : this.wr, p.s);
     const wallDepth = Math.max(0, off - this.wallAt(p.s, left));
     const side = left ? 1 : -1;
+    const info = this.surfaceInfo(p.s, p.d);
     return {
-      surface: this.surfaceAt(p.s, p.d),
-      height: h.h,
+      surface: info.surface,
+      height: h.h + info.kerb,
+      kerb: info.kerb,
       gradX: h.dhdd * nx,
       gradZ: h.dhdd * nz,
+      kerbGradX: info.kerbDhdd * nx,
+      kerbGradZ: info.kerbDhdd * nz,
       wallDepth,
       wallNx: side * nx,
       wallNz: side * nz,

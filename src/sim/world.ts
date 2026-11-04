@@ -7,11 +7,16 @@ import type { Surface, SurfaceTable } from './surfaces';
 
 export interface GroundQuery {
   surface: Surface;
-  /** Ground height, m */
+  /** Ground height incl. kerb profile, m */
   height: number;
-  /** Ground gradient dh/dx and dh/dz (world axes) */
+  /** Part of the height that is a kerb profile on top of the road, m (moves the wheel, loads the suspension) */
+  kerb: number;
+  /** Road gradient dh/dx and dh/dz (world axes): camber and slope, without kerbs */
   gradX: number;
   gradZ: number;
+  /** Extra gradient from a kerb profile under this point (tilts this wheel's contact only) */
+  kerbGradX: number;
+  kerbGradZ: number;
   /** How far the point is past the wall (m, 0 = not touching) and the wall's outward normal (world XZ) */
   wallDepth: number;
   wallNx: number;
@@ -47,8 +52,11 @@ export class FlatWorld implements World {
     return {
       surface: this.surfaces.byName[name]!,
       height: this.grad.x * x + this.grad.z * z,
+      kerb: 0,
       gradX: this.grad.x,
       gradZ: this.grad.z,
+      kerbGradX: 0,
+      kerbGradZ: 0,
       wallDepth: 0,
       wallNx: 0,
       wallNz: 0,

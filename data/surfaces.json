@@ -12,7 +12,11 @@
       "drag": 0.0,
       "color": "#6c7077",
       "sound": "none",
-      "particles": "none"
+      "particles": "none",
+      "profile": {
+        "shape": "none",
+        "height": 0.0
+      }
     },
     "paint": {
       "grip": 0.88,
@@ -24,7 +28,11 @@
       "drag": 0.0,
       "color": "#f4f4f4",
       "sound": "none",
-      "particles": "none"
+      "particles": "none",
+      "profile": {
+        "shape": "none",
+        "height": 0.0
+      }
     },
     "kerb_flat": {
       "grip": 0.9,
@@ -38,13 +46,18 @@
       "colorAlt": "#ffffff",
       "stripe": 1.5,
       "sound": "rumble",
-      "particles": "none"
+      "particles": "none",
+      "profile": {
+        "shape": "ramp",
+        "height": 0.05,
+        "note": "estimate: rises from the road to ~5 cm at the outer edge, angled to steer wheels back onto the track"
+      }
     },
     "kerb_sausage": {
       "grip": 0.7,
       "rollingResistance": 0.01,
       "bump": {
-        "amplitude": 0.05,
+        "amplitude": 0.008,
         "wavelength": 0.8
       },
       "drag": 0.02,
@@ -53,7 +66,12 @@
       "stripe": 1.0,
       "height": 0.12,
       "sound": "thump",
-      "particles": "none"
+      "particles": "none",
+      "profile": {
+        "shape": "hump",
+        "height": 0.12,
+        "note": "estimate: ~12 cm raised hump that throws the car"
+      }
     },
     "astroturf": {
       "grip": 0.62,
@@ -65,7 +83,11 @@
       "drag": 0.0,
       "color": "#2f8f3e",
       "sound": "hiss",
-      "particles": "none"
+      "particles": "none",
+      "profile": {
+        "shape": "none",
+        "height": 0.0
+      }
     },
     "grass": {
       "grip": 0.45,
@@ -77,7 +99,11 @@
       "drag": 0.04,
       "color": "#7cc46a",
       "sound": "rumble",
-      "particles": "grass"
+      "particles": "grass",
+      "profile": {
+        "shape": "none",
+        "height": 0.0
+      }
     },
     "gravel": {
       "grip": 0.35,
@@ -89,7 +115,11 @@
       "drag": 0.35,
       "color": "#d9c49a",
       "sound": "crunch",
-      "particles": "dust"
+      "particles": "dust",
+      "profile": {
+        "shape": "none",
+        "height": 0.0
+      }
     },
     "runoff": {
       "grip": 0.95,
@@ -101,7 +131,11 @@
       "drag": 0.0,
       "color": "#8a8f96",
       "sound": "none",
-      "particles": "none"
+      "particles": "none",
+      "profile": {
+        "shape": "none",
+        "height": 0.0
+      }
     },
     "pitlane": {
       "grip": 1.0,
@@ -113,7 +147,11 @@
       "drag": 0.0,
       "color": "#5e6168",
       "sound": "none",
-      "particles": "none"
+      "particles": "none",
+      "profile": {
+        "shape": "none",
+        "height": 0.0
+      }
     },
     "wall": {
       "grip": 0.0,
@@ -128,11 +166,15 @@
       "stripe": 4.0,
       "height": 1.0,
       "sound": "none",
-      "particles": "none"
+      "particles": "none",
+      "profile": {
+        "shape": "none",
+        "height": 0.0
+      }
     }
   },
   "contact": {
-    "description": "Collision and bump constants (spring-damper contacts, estimates tuned for 1000 Hz)",
+    "description": "Collision, kerb and bump constants (spring-damper contacts, estimates tuned for 1000 Hz). kerbTaper = metres over which kerb profiles ramp in at each end.",
     "source": "estimate",
     "wallStiffness": 15000000.0,
     "wallDamping": 110000.0,
@@ -140,8 +182,7 @@
     "carStiffness": 4000000.0,
     "carDamping": 40000.0,
     "carFriction": 0.08,
-    "bumpLoadGain": 18,
-    "bumpFullSpeed": 5,
-    "carMaxForce": 25000
+    "carMaxForce": 25000,
+    "kerbTaper": 2.0
   }
 }

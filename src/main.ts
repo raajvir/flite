@@ -203,6 +203,21 @@ function drawMirror(): void {
   r.autoClear = true;
 }
 
+// --- Fixed spot camera for screenshots: ?spot=930 (optionally ?spot=930,right).
+const spotCam = (() => {
+  const v = query.get('spot');
+  if (!v || !track) return null;
+  const [sv, side] = v.split(',');
+  const sNum = Number(sv);
+  const sign = side === 'right' ? -1 : 1;
+  const target = track.point(sNum, 0);
+  const eye = track.point(sNum - 30, sign * 18);
+  const cam = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.3, 2500);
+  cam.position.set(eye.x, 9, eye.z);
+  cam.lookAt(target.x, 0, target.z);
+  return { cam, target };
+})();
+
 // --- Worker.
 const worker = new Worker(new URL('./worker/simWorker.ts', import.meta.url), { type: 'module' });
 const send = (m: ToWorker) => worker.postMessage(m);
@@ -345,6 +360,16 @@ function frame(now: number): void {
   if (scenery && race) {
     const c = race.countdown;
     scenery.setStartLights(c > 0 ? Math.min(5, Math.floor((race.t / race.countdown) * 5) + 1) : 0);
+  }
+  // ?spot=<s>[,<side>]: a fixed camera looking at track distance s (for corner screenshots).
+  if (spotCam) {
+    mirrorFrame.style.display = 'none';
+    dash.hide();
+    world.renderer.shadowMap.needsUpdate = true;
+    followSun(world.sun, spotCam.target.x, spotCam.target.z);
+    world.renderer.render(world.scene, spotCam.cam);
+    requestAnimationFrame(frame);
+    return;
   }
   const mapView = debugView && track !== null;
   world.scene.fog = mapView ? null : fog; // fog would wash out the map seen from 2 km up

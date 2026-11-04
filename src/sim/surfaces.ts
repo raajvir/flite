@@ -14,6 +14,10 @@ export interface Surface {
   height?: number;
   sound: string;
   particles: string;
+  /** Cross-section shape of the surface (kerbs): 'none', 'ramp' (rises outwards) or 'hump'. */
+  profile: 'none' | 'ramp' | 'hump';
+  /** Height of the profile, m */
+  profileHeight: number;
 }
 
 export interface ContactParams {
@@ -25,8 +29,8 @@ export interface ContactParams {
   carFriction: number;
   /** Cap on the push from one circle-circle contact, N */
   carMaxForce: number;
-  bumpLoadGain: number;
-  bumpFullSpeed: number;
+  /** Kerb profiles ramp in over this distance at each end of a kerb, m */
+  kerbTaper: number;
 }
 
 export interface SurfaceTable {
@@ -46,6 +50,7 @@ interface RawSurface {
   height?: number;
   sound: string;
   particles: string;
+  profile?: { shape: string; height: number };
 }
 
 export interface SurfacesFile {
@@ -61,8 +66,7 @@ const CONTACT_KEYS: (keyof ContactParams)[] = [
   'carDamping',
   'carFriction',
   'carMaxForce',
-  'bumpLoadGain',
-  'bumpFullSpeed',
+  'kerbTaper',
 ];
 export const REQUIRED_SURFACES = [
   'asphalt',
@@ -98,6 +102,8 @@ export function loadSurfaces(file: SurfacesFile): SurfaceTable {
       color: r.color,
       sound: r.sound,
       particles: r.particles,
+      profile: r.profile?.shape === 'ramp' || r.profile?.shape === 'hump' ? r.profile.shape : 'none',
+      profileHeight: finite(r.profile?.height) ? r.profile!.height : 0,
       ...(r.colorAlt !== undefined && { colorAlt: r.colorAlt }),
       ...(r.stripe !== undefined && { stripe: r.stripe }),
       ...(r.height !== undefined && { height: r.height }),
@@ -113,6 +119,24 @@ export function loadSurfaces(file: SurfacesFile): SurfaceTable {
     contact[k] = v;
   }
   return { list, byName, contact };
+}
+
+/** Ramp kerbs reach full height this far across, then bevel down to the outer edge. */
+const RAMP_PEAK = 0.85;
+
+/**
+ * Height of a surface's cross-section profile at fraction u across it (0 = inner edge,
+ * 1 = outer edge) and its slope dh/du. Ramp kerbs rise outwards (so a wheel on them is
+ * pushed back towards the track); hump kerbs (sausages) rise and fall.
+ */
+export function profileAt(s: Surface, u: number): { h: number; dhdu: number } {
+  const H = s.profileHeight;
+  if (s.profile === 'ramp') {
+    // Rises to full height at RAMP_PEAK, then a short rounded bevel back down at the outer edge.
+    return u < RAMP_PEAK ? { h: (H * u) / RAMP_PEAK, dhdu: H / RAMP_PEAK } : { h: (H * (1 - u)) / (1 - RAMP_PEAK), dhdu: -H / (1 - RAMP_PEAK) };
+  }
+  if (s.profile === 'hump') return { h: H * Math.sin(Math.PI * u), dhdu: H * Math.PI * Math.cos(Math.PI * u) };
+  return { h: 0, dhdu: 0 };
 }
 
 /**
