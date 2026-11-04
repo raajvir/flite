@@ -125,10 +125,21 @@ export class Session {
   }
 
   private planFor(p: CarParams, skill: number): RacingPlan {
-    const key = `${skill.toFixed(4)}`;
+    const key = `${skill.toFixed(4)}|${p.tireMuY.toFixed(4)}|${p.powerScale.toFixed(4)}`;
     let plan = this.plans.get(key);
     if (!plan) this.plans.set(key, (plan = new RacingPlan(this.world, p, skill)));
     return plan;
+  }
+
+  /** Give every AI car new parameters (difficulty edge) and rebuild their plans. */
+  setAIParams(p: CarParams, skills: number[]): void {
+    let k = 0;
+    for (const c of this.cars) {
+      if (!c.ai) continue;
+      c.params = p;
+      const skill = skills[k++] ?? c.ai.plan.skill;
+      c.ai.plan = this.planFor(p, skill);
+    }
   }
 
   /** Change AI skills mid-session (one value per AI car, in car order). */

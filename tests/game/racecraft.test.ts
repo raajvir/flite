@@ -153,3 +153,37 @@ describe('AI personality sliders', () => {
     expect(mid.defendRange).toBeCloseTo(45, 9);
   });
 });
+
+describe('overtaking and the 100-150% difficulty edge', () => {
+  it.each([1, 0.5])('a faster AI gets past a slower car ahead (aggression %s)', async (aggression) => {
+    const { Session } = await import('../../src/game/session');
+    const { aiCarParams } = await import('../../src/ai/aiParams');
+    const { CAR } = await import('../sim/helpers');
+    const ap = aiCarParams(CAR);
+    // Car 0: slow, on pole. Car 1: quick, right behind it.
+    const sess = new Session(world, [{ params: ap, ai: { skill: 0.8 } }, { params: ap, ai: { skill: 1.0 } }], 3, 0, [0, 1]);
+    sess.style = { aggression, defense: 0.5 };
+    while (sess.t < 200 && sess.cars[1]!.race.progress < world.length * 1.5) sess.step({ steer: 0, throttle: 0, brake: 0 });
+    expect(sess.snapshot().order[0]).toBe(1);
+  }, 60_000);
+
+  it('at 150% the AI is clearly faster than at 100%, and still on the track', async () => {
+    const { Session } = await import('../../src/game/session');
+    const { aiCarParams } = await import('../../src/ai/aiParams');
+    const { CAR } = await import('../sim/helpers');
+    const lap = (difficulty: number) => {
+      const sess = new Session(world, [{ params: aiCarParams(CAR, difficulty), ai: { skill: 1.0 } }], 2, 0);
+      let worstOff = -Infinity;
+      while (sess.t < 220 && !sess.cars[0]!.race.finished) {
+        sess.step({ steer: 0, throttle: 0, brake: 0 });
+        const c = sess.cars[0]!;
+        const edge = c.race.d >= 0 ? world.at(world.wl, c.race.s) : world.at(world.wr, c.race.s);
+        worstOff = Math.max(worstOff, Math.abs(c.race.d) - edge);
+      }
+      return { lap: sess.cars[0]!.race.lastLap!, worstOff };
+    };
+    const normal = lap(1), hard = lap(1.5);
+    expect(hard.lap).toBeLessThan(normal.lap - 2);
+    expect(hard.worstOff).toBeLessThan(1.5);
+  }, 120_000);
+});

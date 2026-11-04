@@ -168,7 +168,7 @@ export function showStartMenu(
     seg('Session', [['Race', 'race'], ['Hot lap', 'hotlap']], choice.hotlap ? 'hotlap' : 'race', (v) => (choice.hotlap = v === 'hotlap')),
     seg('Laps', [['1', 1], ['3', 3], ['5', 5], ['10', 10]], choice.laps, (v) => (choice.laps = Number(v))),
     slider('Opponents', 0, 15, 1, choice.ai, (v) => (v === 0 ? 'practice' : String(v)), (v) => (choice.ai = v)),
-    slider('AI difficulty', 0, 1, 0.01, choice.difficulty, (v) => `${Math.round(v * 100)}%`, (v) => (choice.difficulty = v)),
+    slider('AI difficulty', 0, 1.5, 0.01, choice.difficulty, (v) => `${Math.round(v * 100)}%`, (v) => (choice.difficulty = v)),
     seg('Drive mode', modes.map((m) => [m.builtin ? m.name : `★ ${m.name}`, m.id] as [string, string]), choice.mode, (v) => (choice.mode = String(v))),
   );
   panel.append(opts);

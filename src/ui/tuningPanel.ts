@@ -382,7 +382,7 @@ export class TuningPanel {
   }
 
   setAiDifficulty(v: number): void {
-    this.stored.race.aiDifficulty = Math.max(0, Math.min(1, v));
+    this.stored.race.aiDifficulty = Math.max(0, Math.min(1.5, v));
     this.save();
   }
 
@@ -453,7 +453,7 @@ export class TuningPanel {
     const race = this.stored.race;
     this.el.append(
       this.group('Race', true, [
-        this.row('AI difficulty', 'how much of the grip the AI dares to use; applies immediately', 0, 1, 0.01, race.aiDifficulty, RACE_DEFAULTS.aiDifficulty, pct, false, (v) => {
+        this.row('AI difficulty', 'up to 100% = how much of its grip the AI uses; above 100% the AI cars also get extra grip and power (up to +15% / +10% at 150%)', 0, 1.5, 0.01, race.aiDifficulty, RACE_DEFAULTS.aiDifficulty, pct, false, (v) => {
           race.aiDifficulty = v;
           this.save();
           this.opts.onRaceChange(this.race);

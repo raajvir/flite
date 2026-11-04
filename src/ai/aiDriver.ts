@@ -122,6 +122,17 @@ export function planBrakingDecel(p: CarParams, skill: number, v: number): number
   return (muX * (p.mass * GRAVITY + aeroK * v * v)) / p.mass + (dragK * v * v) / p.mass;
 }
 
+/** A car alongside counts as having passed us only if it's within this of our speed or faster, m/s. */
+const CONCEDE_SPEED_MARGIN = 0.5;
+/** Passing is set up on straights: no braking zone within this distance ahead, m ... */
+const PASS_STRAIGHT_LOOKAHEAD = 100;
+/** ... meaning the planned speed there isn't more than this below ours, m/s. */
+const PASS_STRAIGHT_MARGIN = 3;
+/** At or above this aggression the AI will also lunge into corners. */
+const PASS_LUNGE_AGGRESSION = 0.75;
+/** While pulling out to pass: back off only if closer than this behind and still this much in line, m. */
+const PASS_MIN_GAP = 5;
+const PASS_MIN_LATERAL = 1.6;
 /** The tires give a little more than the assist's target before it intervenes. */
 const STABILITY_PLAN_MARGIN = 0.1;
 /** Crests are judged over +-this many samples (worst = most negative curvature). */
@@ -244,13 +255,22 @@ export function aiDrive(
     if (gap <= 0 || gap > st.overtakeLookahead) continue;
     const lat = o.race.d - myD;
     if (Math.abs(lat) > t.carWidthClearance + 1) continue;
-    if (u - o.car.u > st.passMinClosing) {
+    // Start a pass on a straight (no braking zone just ahead), or anywhere if very aggressive;
+    // once alongside we carry on. Lunging into corners from behind mostly ended in the gravel.
+    const straightAhead = plan.speedAt(s + PASS_STRAIGHT_LOOKAHEAD) > u - PASS_STRAIGHT_MARGIN;
+    const alongside = gap < t.alongsideLength;
+    const mayPass = straightAhead || alongside || style.aggression >= PASS_LUNGE_AGGRESSION;
+    if (mayPass && u - o.car.u > st.passMinClosing) {
       const leftRoom = w.at(w.wl, s) - o.race.d, rightRoom = o.race.d + w.at(w.wr, s);
       const side = leftRoom > rightRoom ? 1 : -1;
       desired = clampD(o.race.d + side * t.overtakeLateral);
     }
+    const passing = mayPass && u - o.car.u > st.passMinClosing;
     const safeGap = st.followGap + Math.max(0, u - o.car.u) * st.followTimeGap;
-    if (gap < safeGap && Math.abs(lat) < t.carWidthClearance) speedCap = Math.min(speedCap, o.car.u - 1);
+    // While moving out to pass, only back off if we're about to hit its gearbox; otherwise
+    // match its speed at a safe distance.
+    const tooClose = passing ? gap < PASS_MIN_GAP && Math.abs(lat) < PASS_MIN_LATERAL : gap < safeGap && Math.abs(lat) < t.carWidthClearance;
+    if (tooClose) speedCap = Math.min(speedCap, o.car.u - 1);
   }
 
   // --- Defend: a faster car closing from behind.
@@ -290,7 +310,9 @@ export function aiDrive(
     // A car alongside that has got its nose ahead has won the position: concede it —
     // more room and a small lift, so a pass that ends with touching wheels doesn't turn into
     // a tug of war.
-    const conceding = gap > st.concedeMargin;
+    // Only a car that is at least as quick as us has passed us; if WE are the quicker car
+    // we are the one overtaking, so we keep going (conceding here stopped every pass).
+    const conceding = gap > st.concedeMargin && o.car.u >= u - CONCEDE_SPEED_MARGIN;
     const need = o.race.d + side * (conceding ? t.concedeClearance : st.sideClearance);
     if (conceding) speedCap = Math.min(speedCap, Math.max(o.car.u - t.concedeSpeedDrop, vPlanNow * t.yieldMinPlanFraction));
     // Side by side into a corner: the car on the outside gives way unless clearly ahead.

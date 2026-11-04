@@ -76,7 +76,7 @@ async function build(o: StartOptions): Promise<void> {
   }
   solo = null;
   const world = await loadTrack(o.track);
-  const aiParams = aiCarParams(CAR);
+  const aiParams = aiCarParams(CAR, o.aiDifficulty);
   if (o.hotlap) {
     // Hot lap: alone, already at speed, unlimited laps.
     session = new Session(world, [{ params: playerParams }], HOTLAP_LAPS, 0, undefined, { distance: HOTLAP_RUNUP, speed: HOTLAP_SPEED });
@@ -196,7 +196,7 @@ ctx.onmessage = (e) => {
       if (options) options = { ...options, aiDifficulty: msg.difficulty };
       if (session && options) {
         const skills = skillsFor(msg.difficulty, options.aiCount);
-        session.setAISkills(options.autopilot ? [skillsFor(msg.difficulty, 1)[0]!, ...skills] : skills);
+        session.setAIParams(aiCarParams(CAR, msg.difficulty), options.autopilot ? [skillsFor(msg.difficulty, 1)[0]!, ...skills] : skills);
       }
       break;
     case 'reset':
