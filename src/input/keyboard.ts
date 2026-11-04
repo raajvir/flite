@@ -23,6 +23,7 @@ const STEER_LEFT = new Set(['ArrowLeft', 'KeyA']);
 const STEER_RIGHT = new Set(['ArrowRight', 'KeyD']);
 const THROTTLE = new Set(['ArrowUp', 'KeyW']);
 const BRAKE = new Set(['ArrowDown', 'KeyS', 'Space']);
+const BOOST = new Set(['ShiftLeft', 'ShiftRight']);
 const DRIVING_KEYS = new Set([...STEER_LEFT, ...STEER_RIGHT, ...THROTTLE, ...BRAKE]);
 
 function approach(current: number, target: number, rate: number, dt: number): number {
@@ -70,7 +71,7 @@ export class KeyboardDriver {
     const brk = this.any(BRAKE) ? 1 : 0;
     this.out.brake = approach(this.out.brake, brk, brk > this.out.brake ? t.brakeBuild : t.brakeRelease, dt);
 
-    return { ...this.out };
+    return { ...this.out, boost: this.any(BOOST) ? 1 : 0 };
   }
 
   isDown(code: string): boolean {

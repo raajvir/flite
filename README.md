@@ -23,7 +23,7 @@ URL options:
 - `?set=sim` — use the `sim` handling set instead of `feel`
 
 Controls: ↑/W throttle · ↓/S/Space brake (hold when stopped = reverse) · ←→/AD steer ·
-R back on track · Shift+R restart race · V map view · L braking line · C chase/cockpit camera · P switch feel/sim handling · O tuning panel · M mute ·
+Shift ERS boost · R back on track · Backspace restart race · V map view · L braking line · C chase/cockpit camera · P switch feel/sim handling · O tuning panel · M mute ·
 T start/stop telemetry recording (saves a CSV).
 Gamepad: left stick steer, right trigger throttle, left trigger brake (touch it to take over).
 

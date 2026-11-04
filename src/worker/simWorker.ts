@@ -57,7 +57,7 @@ function build(o: StartOptions): void {
   const playerParams = load(o.paramSet, o.overrides);
   if (o.track === 'test') {
     session = null;
-    solo = { state: initialState({ x: 0, y: 0, z: 0, yaw: 0 }, playerParams.idleRpm), params: playerParams };
+    solo = { state: initialState({ x: 0, y: 0, z: 0, yaw: 0 }, playerParams.idleRpm, playerParams.ersCapacity), params: playerParams };
     playerIndex = 0;
     return;
   }
@@ -147,7 +147,7 @@ ctx.onmessage = (e) => {
       break;
     case 'reset':
       if (session) session.resetCar(playerIndex);
-      if (solo) solo.state = initialState({ x: 0, y: 0, z: 0, yaw: 0 }, solo.params.idleRpm);
+      if (solo) solo.state = initialState({ x: 0, y: 0, z: 0, yaw: 0 }, solo.params.idleRpm, solo.params.ersCapacity);
       break;
     case 'restart':
       if (options) build(options);

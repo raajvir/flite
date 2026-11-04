@@ -1,6 +1,6 @@
 /**
  * Gamepad -> DriverInputs (standard mapping: Xbox/PlayStation layouts).
- * Left stick X = steer, right trigger = throttle, left trigger = brake.
+ * Left stick X = steer, right trigger = throttle, left trigger = brake, A or right bumper = ERS boost.
  * Analog inputs need no smoothing; a small deadzone and a gentle curve on
  * steering make small corrections easier.
  */
@@ -30,7 +30,8 @@ export class GamepadDriver {
       const v = pad.buttons[i]?.value ?? 0;
       return v < t.triggerDeadzone ? 0 : v;
     };
-    const inputs = { steer, throttle: trig(7), brake: trig(6) };
+    const boost = pad.buttons[0]?.pressed || pad.buttons[5]?.pressed ? 1 : 0;
+    const inputs = { steer, throttle: trig(7), brake: trig(6), boost };
     if (inputs.steer !== 0 || inputs.throttle > 0 || inputs.brake > 0) this.active = true;
     return inputs;
   }

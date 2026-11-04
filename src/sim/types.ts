@@ -9,6 +9,8 @@ export interface DriverInputs {
   throttle: number;
   /** 0..1. Held while (nearly) stopped = reverse gear; in reverse, brake and throttle swap. */
   brake: number;
+  /** 0..1 ERS battery boost (Shift). Optional: absent = 0. */
+  boost?: number;
 }
 
 export const NEUTRAL_INPUTS: Readonly<DriverInputs> = { steer: 0, throttle: 0, brake: 0 };
@@ -82,6 +84,10 @@ export interface CarState {
   shiftTimer: number;
   /** Engine speed, rpm */
   rpm: number;
+  /** ERS battery energy, J */
+  battery: number;
+  /** ERS power being deployed right now, W (0 when not boosting) */
+  ersDeploy: number;
   /** Low-pass filtered body accelerations used for weight transfer, m/s² (x forward, y left) */
   axFiltered: number;
   ayFiltered: number;
@@ -106,7 +112,7 @@ export interface Pose {
 
 const restingWheel = (): WheelState => ({ omega: 0, spin: 0, kappa: 0, tanAlpha: 0, load: 0, fx: 0, fy: 0, surface: 0, bump: 0 });
 
-export function initialState(pose: Pose, idleRpm = 0): CarState {
+export function initialState(pose: Pose, idleRpm = 0, battery = 0): CarState {
   return {
     t: 0,
     ...pose,
@@ -118,6 +124,8 @@ export function initialState(pose: Pose, idleRpm = 0): CarState {
     gear: 1,
     shiftTimer: 0,
     rpm: idleRpm,
+    battery,
+    ersDeploy: 0,
     axFiltered: 0,
     ayFiltered: 0,
     pitch: 0,

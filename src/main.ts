@@ -181,9 +181,10 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'KeyM') sound.toggleMute();
   if (e.code === 'KeyO') panel.toggle();
-  if (e.code === 'KeyR') {
-    send({ type: e.shiftKey ? 'restart' : 'reset' });
-    if (e.shiftKey) views.forEach((v) => v.interp.clear());
+  if (e.code === 'KeyR') send({ type: 'reset' });
+  if (e.code === 'Backspace') {
+    send({ type: 'restart' });
+    views.forEach((v) => v.interp.clear());
   }
   if (e.code === 'KeyC') cam.toggle();
   if (e.code === 'KeyV') debugView = !debugView;

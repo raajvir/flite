@@ -64,7 +64,7 @@ export class Session {
       const s = world.wrap(-GRID_BEHIND_LINE - slot * GRID_ROW_SPACING);
       const d = (slot % 2 === 0 ? 1 : -1) * GRID_STAGGER;
       const pos = world.point(s, d);
-      const state = initialState({ x: pos.x, y: 0, z: pos.z, yaw: world.headingAt(s) }, setup.params.idleRpm);
+      const state = initialState({ x: pos.x, y: 0, z: pos.z, yaw: world.headingAt(s) }, setup.params.idleRpm, setup.params.ersCapacity);
       let ai: SessionCar['ai'] = null;
       if (setup.ai) ai = { plan: this.planFor(setup.params, setup.ai.skill), state: initialAIState() };
       return { state, params: setup.params, race: newRaceCar(world, pos.x, pos.z), inputs: { ...NEUTRAL_INPUTS }, ai };
@@ -142,7 +142,7 @@ export class Session {
     const s = c.race.s;
     const d = this.world.at(this.world.raceD, s);
     const pos = this.world.point(s, d);
-    const fresh = initialState({ x: pos.x, y: 0, z: pos.z, yaw: this.world.headingAt(s) }, c.params.idleRpm);
+    const fresh = initialState({ x: pos.x, y: 0, z: pos.z, yaw: this.world.headingAt(s) }, c.params.idleRpm, c.state.battery);
     c.state = { ...fresh, t: c.state.t, distance: c.state.distance };
     if (c.ai) c.ai.state = initialAIState();
   }

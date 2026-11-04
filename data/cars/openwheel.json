@@ -66,6 +66,10 @@
       "reverseMaxSpeed": { "value": 8, "unit": "m/s", "source": "estimate" },
       "reverseEngageSpeed": { "value": 0.5, "unit": "m/s", "source": "estimate", "note": "below this, holding brake selects reverse" },
 
+      "ersPower": { "value": 120000, "unit": "W", "source": "design", "note": "gameplay battery boost (Shift); F2-class cars have no ERS, this is a game feature" },
+      "ersCapacity": { "value": 2000000, "unit": "J", "source": "design", "note": "~17 s of full boost" },
+      "ersHarvestPower": { "value": 60000, "unit": "W", "source": "design", "note": "recharge rate under full braking" },
+      "ersHarvestMinSpeed": { "value": 5, "unit": "m/s", "source": "design" },
       "diffLocking": { "value": 150, "unit": "N*m*s/rad", "source": "estimate", "note": "limited-slip: torque moved per rad/s of wheel speed difference" },
       "diffMaxLockTorque": { "value": 800, "unit": "N*m", "source": "estimate" },
 

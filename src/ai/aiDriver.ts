@@ -58,6 +58,10 @@ export const AI_TUNING = {
   yieldSpeedDrop: 3, // m/s below the other car's speed when giving way
   yieldAheadMargin: 2, // m: the outside car only gives way if it isn't ahead by more than this
   yieldMinPlanFraction: 0.6, // giving way never drops below this share of the planned speed
+  ersAttackRange: 60, // m: boost when a car is this close ahead (attack) or behind (defend)
+  ersMinCharge: 0.2, // share of battery kept back for attacking/defending
+  ersFreeCharge: 0.75, // above this share, boost on any straight
+  ersStraightMargin: 5, // m/s: "on a straight" = plan speed ahead is this much above current speed
 };
 
 export interface AIProfile {
@@ -298,12 +302,23 @@ export function aiDrive(
   const throttle = err > 0 ? Math.min(1, err * t.throttleGain + 0.2) : 0;
   const brake = err < -1 ? Math.min(1, -err * t.brakeGain) : 0;
 
+  // ERS: boost on straights when attacking or defending, or freely when the battery is full-ish.
+  const charge = car.battery / p.ersCapacity;
+  const onStraight = throttle >= 0.99 && plan.speedAt(s + 100) > u + t.ersStraightMargin;
+  let racing = threatGap > -t.ersAttackRange;
+  for (const o of others) {
+    let gap = o.race.s - s;
+    if (gap < -L / 2) gap += L;
+    if (gap > 0 && gap < t.ersAttackRange) racing = true;
+  }
+  const boost = onStraight && ((racing && charge > t.ersMinCharge) || charge > t.ersFreeCharge) ? 1 : 0;
+
   // Stuck (stopped) or lost (spun / facing across the track) both count towards a reset.
   const headingErr = Math.abs(Math.atan2(Math.sin(car.yaw - w.headingAt(s)), Math.cos(car.yaw - w.headingAt(s))));
   const lost = Math.abs(u) < t.stuckSpeed || headingErr > t.wrongWayAngle;
   const stuckFor = lost ? ai.stuckFor + dt : 0;
   return {
-    inputs: { steer, throttle, brake },
+    inputs: { steer, throttle, brake, boost },
     state: { offset, stuckFor, defendSide },
     wantsReset: stuckFor > t.stuckTime,
   };

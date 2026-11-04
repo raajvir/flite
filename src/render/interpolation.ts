@@ -90,6 +90,8 @@ function lerpState(a: CarState, b: CarState, k: number): CarState {
     steerAngle: l(a.steerAngle, b.steerAngle, k),
     distance: l(a.distance, b.distance, k),
     rpm: l(a.rpm, b.rpm, k),
+    battery: l(a.battery, b.battery, k),
+    ersDeploy: b.ersDeploy,
     axFiltered: l(a.axFiltered, b.axFiltered, k),
     ayFiltered: l(a.ayFiltered, b.ayFiltered, k),
     pitch: l(a.pitch, b.pitch, k),

@@ -15,7 +15,7 @@
  * Pure: no globals, no randomness. Same inputs -> bit-identical output.
  */
 import surfacesFile from '../../data/surfaces.json';
-import { AIR_DENSITY, GRAVITY } from './constants';
+import { AIR_DENSITY, GRAVITY, RPM_TO_RADPS } from './constants';
 import type { CarParams } from './params';
 import { chooseGear, engineTorque, splitDiff, totalRatio, wheelRpm } from './powertrain';
 import { bumpNoise, loadSurfaces, type SurfacesFile } from './surfaces';
@@ -118,6 +118,18 @@ export function step(
   const rpm = Math.max(p.idleRpm, wheelRpm(p, gear, drivenOmega));
   let crank = shift.shiftTimer > 0 ? 0 : engineTorque(p, drivePedal, rpm);
   if (reverse && s.u < -p.reverseMaxSpeed) crank = Math.min(crank, 0);
+
+  // ERS boost: extra power from the battery while boost is held (forward gears, on throttle).
+  const boostIn = clamp(inputs.boost ?? 0, 0, 1);
+  let ersDeploy = 0;
+  if (boostIn > 0 && gear > 0 && drivePedal > 0 && shift.shiftTimer === 0 && rpm < p.revLimitRpm && s.battery > 0) {
+    ersDeploy = Math.min(p.ersPower * boostIn * drivePedal, s.battery / dt);
+    crank += ersDeploy / (rpm * RPM_TO_RADPS);
+  }
+  let battery = s.battery - ersDeploy * dt;
+  // Harvest under braking.
+  if (brakePedal > 0 && Math.abs(s.u) > p.ersHarvestMinSpeed) battery += p.ersHarvestPower * brakePedal * dt;
+  battery = clamp(battery, 0, p.ersCapacity);
   let axleTorque = crank * totalRatio(p, gear) * p.drivetrainEfficiency;
 
   // Traction control (assist): cut drive torque when a driven tire's COMBINED slip
@@ -323,6 +335,8 @@ export function step(
     gear,
     shiftTimer: shift.shiftTimer,
     rpm,
+    battery,
+    ersDeploy,
     axFiltered: s.axFiltered + (ax - s.axFiltered) * lag,
     ayFiltered: s.ayFiltered + (ay - s.ayFiltered) * lag,
     ...body,
