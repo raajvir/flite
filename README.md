@@ -16,8 +16,7 @@ number of opponents (0 = practice), AI difficulty and drive mode, then Start. A 
 older layouts because that is what the source data contains (marked "older layout").
 Esc opens the pause menu (resume, rewind, restart, settings, main menu, and the controls list).
 
-Drive modes: Default (the tuned feel set), Sim, Arcade (very grippy, snappy, drifty — an original
-tuning aiming for a PolyTrack-like feel), plus your own: tweak in the tuning panel (O) and
+Drive modes: Default (the tuned feel set), Sim, Arcade (very grippy, snappy and drifty), plus your own: tweak in the tuning panel (O) and
 "Save as new mode". P cycles modes while driving.
 
 Trackpad steering: K (or tuning panel → Steering input). Click the game to capture the pointer,
@@ -103,3 +102,21 @@ docs/demos/  screenshots from each milestone
 - [ ] M5 game loop
 - [ ] M6 validation
 - [ ] M7 more circuits
+
+## Play online
+
+https://raajvir.github.io/flite/ — rebuilt and redeployed automatically on every push to `main`
+(see `.github/workflows/deploy.yml`).
+
+## Credits and data licenses
+
+- **Track centrelines and racing lines:** TUM Institute of Automotive Technology,
+  [racetrack-database](https://github.com/TUMFTM/racetrack-database), LGPL-3.0
+  (license kept next to the data in each `data/tracks/*/raw/`). Resampled and extended
+  (widths, elevation, surfaces) by `tools/track_builder.py`.
+- **Elevation:** sampled via [OpenTopoData](https://www.opentopodata.org/) from
+  EU-DEM v1.1 (European circuits; produced using Copernicus data and information funded by
+  the European Union — EU-DEM layers) and NASA SRTM (elsewhere). Track alignment used
+  OpenStreetMap geometry (© OpenStreetMap contributors); no OSM data is redistributed.
+- **Everything else** (code, car, sounds, scenery) is original work for this project.
+  Circuit, car and team names are generic; no real logos, liveries or trademarks are used.

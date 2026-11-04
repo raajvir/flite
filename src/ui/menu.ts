@@ -178,6 +178,14 @@ export function showStartMenu(
   go.addEventListener('click', () => onStart(choice));
   start.append(go);
   panel.append(start);
+  const credits = document.createElement('div');
+  credits.className = 'sub';
+  credits.style.marginTop = '18px';
+  credits.style.fontSize = '11px';
+  credits.innerHTML =
+    'Track data: TUM racetrack-database (LGPL-3.0) · Elevation: EU-DEM (Copernicus) and NASA SRTM via OpenTopoData · ' +
+    'Map alignment: © OpenStreetMap contributors · Circuit names are generic.';
+  panel.append(credits);
   document.body.append(root);
   return root;
 }
