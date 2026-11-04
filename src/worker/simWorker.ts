@@ -9,6 +9,7 @@
  * test area with just the player's car.
  */
 import carFile from '../../data/cars/openwheel.json';
+import { aiCarParams } from '../ai/aiParams';
 import { skillsFor } from '../ai/difficulty';
 import { Session } from '../game/session';
 import { SIM_DT } from '../sim/constants';
@@ -62,7 +63,7 @@ function build(o: StartOptions): void {
   }
   solo = null;
   const world = loadTrack(o.track);
-  const aiParams = load('feel', {});
+  const aiParams = aiCarParams(CAR);
   const skills = skillsFor(o.aiDifficulty, o.aiCount);
   const setups: { params: CarParams; ai?: { skill: number } }[] = [
     o.autopilot ? { params: aiParams, ai: { skill: skillsFor(o.aiDifficulty, 1)[0]! } } : { params: playerParams },

@@ -8,7 +8,12 @@
  *    acceleration. `skill` scales how much grip the AI dares to use.
  * 3. Driving: pure-pursuit steering towards a point ahead on the line; throttle/brake
  *    from speed error.
- * 4. Racecraft: swing out to pass a slower car ahead, back off if about to hit it.
+ * 4. Racecraft, in priority order:
+ *    - leave space: never squeeze a car that is alongside; keep a car's width, back off if no room
+ *    - pass: swing out to pass a slower car ahead, follow at a safe gap if it can't be passed
+ *    - defend: when a faster car closes from behind, make ONE move to cover the inside of the
+ *      next corner (only when not braking, only while the attacker is still a few metres back),
+ *      then hold that line — no late blocking, no weaving.
  *
  * Pure and deterministic (state in, inputs + new AI state out).
  */
@@ -33,10 +38,26 @@ export const AI_TUNING = {
   overtakeLateral: 3.3, // m beside the car being passed
   carWidthClearance: 2.4, // m: lateral gap that counts as "side by side"
   followGap: 9, // m: closer than this behind a car we can't pass -> match its speed
+  followTimeGap: 0.8, // s of closing speed added to followGap (closing fast = back off earlier)
   offsetRate: 2.0, // m/s: how fast the AI moves across the track
   edgeMargin: 1.3, // m from the track edge
   stuckSpeed: 2, // m/s
   stuckTime: 4, // s before asking to be reset onto the track
+  wrongWayAngle: 1.6, // rad off the track direction that counts as "lost it" (spun, facing across)
+  defendRange: 45, // m: a faster car this close behind is a threat
+  defendCommitGap: 8, // m: only start a defensive move while the attacker is at least this far back
+  defendEdgeGap: 1.0, // m (beyond edgeMargin) left between the defending car and the inside edge
+  defendCornerLookahead: 700, // m: how far ahead to look for the next corner
+  defendCornerStep: 25, // m: scan step
+  defendMinTurn: 0.3, // rad of heading change ahead that counts as a corner worth defending
+  alongsideLength: 6, // m along the track: closer than this = side by side
+  sideClearance: 2.6, // m centre-to-centre kept from a car alongside (car width + margin)
+  offsetRateUrgent: 4.0, // m/s: moving over to leave space can be quicker than other moves
+  yieldCornerLookahead: 80, // m: "are we about to turn?" for deciding who gives way
+  yieldMinTurn: 0.25, // rad of heading change ahead that makes it a corner
+  yieldSpeedDrop: 3, // m/s below the other car's speed when giving way
+  yieldAheadMargin: 2, // m: the outside car only gives way if it isn't ahead by more than this
+  yieldMinPlanFraction: 0.6, // giving way never drops below this share of the planned speed
 };
 
 export interface AIProfile {
@@ -48,9 +69,11 @@ export interface AIState {
   /** Extra lateral offset on top of the racing line (for passing), m */
   offset: number;
   stuckFor: number;
+  /** Defensive line being held: +1 = covering the left, -1 = covering the right, 0 = not defending */
+  defendSide: number;
 }
 
-export const initialAIState = (): AIState => ({ offset: 0, stuckFor: 0 });
+export const initialAIState = (): AIState => ({ offset: 0, stuckFor: 0, defendSide: 0 });
 
 /**
  * Deceleration the speed plan assumes when braking from speed v (grip incl. downforce,
@@ -155,35 +178,110 @@ export function aiDrive(
   const s = race.s;
   const u = car.u;
 
-  // --- Racecraft: look for a car ahead on our line.
-  const myD = w.at(w.raceD, s) + ai.offset;
-  let desiredOffset = 0;
+  const raceHere = w.at(w.raceD, s);
+  const myD = race.d;
+  const minD = -w.at(w.wr, s) + t.edgeMargin;
+  const maxD = w.at(w.wl, s) - t.edgeMargin;
+  const clampD = (d: number) => Math.max(minD, Math.min(maxD, d));
+  const vPlanNow = plan.speedAt(s);
+  const braking = u > vPlanNow + 2;
   let speedCap = Infinity;
+  let desired: number | null = null; // absolute lateral target (null = racing line)
+
+  // --- Pass: a slower car ahead on our line.
   for (const o of others) {
     let gap = o.race.s - s;
     if (gap < -L / 2) gap += L;
     if (gap <= 0 || gap > t.overtakeLookahead) continue;
     const lat = o.race.d - myD;
     if (Math.abs(lat) > t.carWidthClearance + 1) continue;
-    const closing = u - o.car.u;
-    if (closing > -1) {
-      // Pass on the side with more room.
-      const wl = w.at(w.wl, s), wr = w.at(w.wr, s);
-      const leftRoom = wl - o.race.d, rightRoom = o.race.d + wr;
+    if (u - o.car.u > -1) {
+      const leftRoom = w.at(w.wl, s) - o.race.d, rightRoom = o.race.d + w.at(w.wr, s);
       const side = leftRoom > rightRoom ? 1 : -1;
-      const target = o.race.d + side * t.overtakeLateral;
-      desiredOffset = target - w.at(w.raceD, s);
+      desired = clampD(o.race.d + side * t.overtakeLateral);
     }
-    if (gap < t.followGap && Math.abs(lat) < t.carWidthClearance) speedCap = Math.min(speedCap, o.car.u - 1);
+    const safeGap = t.followGap + Math.max(0, u - o.car.u) * t.followTimeGap;
+    if (gap < safeGap && Math.abs(lat) < t.carWidthClearance) speedCap = Math.min(speedCap, o.car.u - 1);
   }
-  const maxStep = t.offsetRate * dt;
+
+  // --- Defend: a faster car closing from behind.
+  let threatGap = -Infinity; // nearest attacker's gap (negative = behind)
+  for (const o of others) {
+    let gap = o.race.s - s;
+    if (gap < -L / 2) gap += L;
+    if (gap >= -1 || gap < -t.defendRange) continue;
+    if (o.car.u - u < -0.5) continue; // slower car behind: no threat
+    threatGap = Math.max(threatGap, gap);
+  }
+  let defendSide = threatGap > -Infinity ? ai.defendSide : 0;
+  if (desired === null && threatGap > -Infinity) {
+    if (defendSide === 0 && !braking && threatGap <= -t.defendCommitGap) {
+      // Which way does the next real corner turn? Scan ahead until the heading has changed
+      // by a corner's worth (heading increases = turning left = +d side).
+      for (let x = t.defendCornerStep; x <= t.defendCornerLookahead; x += t.defendCornerStep) {
+        let dh = w.headingAt(s + x) - w.headingAt(s);
+        dh = Math.atan2(Math.sin(dh), Math.cos(dh));
+        if (Math.abs(dh) > t.defendMinTurn) {
+          defendSide = dh > 0 ? 1 : -1;
+          break;
+        }
+      }
+    }
+    if (defendSide !== 0) desired = defendSide > 0 ? maxD - t.defendEdgeGap : minD + t.defendEdgeGap;
+  }
+
+  // --- Leave space (overrides everything): keep a car's width from anyone alongside.
+  let latTarget = desired ?? raceHere;
+  let urgent = false;
+  for (const o of others) {
+    let gap = o.race.s - s;
+    if (gap < -L / 2) gap += L;
+    if (Math.abs(gap) > t.alongsideLength) continue;
+    const side = myD >= o.race.d ? 1 : -1; // which side of them we are on
+    const need = o.race.d + side * t.sideClearance;
+    // Side by side into a corner: the car on the outside gives way unless clearly ahead.
+    // The corner is judged from the point midway between the two cars, so both cars agree on
+    // who is inside (judging from each car's own position made both yield in chicanes).
+    const sMid = s + gap / 2;
+    let turn = w.headingAt(sMid + t.yieldCornerLookahead) - w.headingAt(sMid);
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+    // turn > 0 = left-hander, inside = left = +d; we're outside if we're on the other side.
+    const outside = Math.abs(turn) > t.yieldMinTurn && Math.sign(turn) !== side;
+    if (outside && gap >= -t.yieldAheadMargin) {
+      speedCap = Math.min(speedCap, Math.max(o.car.u - t.yieldSpeedDrop, vPlanNow * t.yieldMinPlanFraction));
+    }
+    if (side > 0 && latTarget < need) {
+      latTarget = need;
+      urgent = true;
+    } else if (side < 0 && latTarget > need) {
+      latTarget = need;
+      urgent = true;
+    }
+    // No room on our side and they're level or ahead: back off rather than squeeze.
+    const noRoom = side > 0 ? need > maxD + 0.3 : need < minD - 0.3;
+    if (noRoom && gap >= -1) speedCap = Math.min(speedCap, o.car.u - 2);
+  }
+  const desiredOffset = clampD(latTarget) - raceHere;
+  const maxStep = (urgent ? t.offsetRateUrgent : t.offsetRate) * dt;
   let offset = ai.offset + Math.max(-maxStep, Math.min(maxStep, desiredOffset - ai.offset));
 
   // --- Steering: pure pursuit towards a point ahead on (racing line + offset).
   const look = t.lookaheadBase + t.lookaheadPerSpeed * Math.abs(u);
   const sl = s + look;
   const wl = w.at(w.wl, sl), wr = w.at(w.wr, sl);
-  const dTarget = Math.max(-wr + t.edgeMargin, Math.min(wl - t.edgeMargin, w.at(w.raceD, sl) + offset));
+  let dTarget = Math.max(-wr + t.edgeMargin, Math.min(wl - t.edgeMargin, w.at(w.raceD, sl) + offset));
+  // The racing line can swing across the track before the steering point (chicanes): keep the
+  // clearance there too, assuming a car alongside follows the line's swing like we do.
+  const swing = w.at(w.raceD, sl) - raceHere;
+  for (const o of others) {
+    let gap = o.race.s - s;
+    if (gap < -L / 2) gap += L;
+    if (Math.abs(gap) > t.alongsideLength) continue;
+    const side = myD >= o.race.d ? 1 : -1;
+    const need = o.race.d + swing + side * t.sideClearance;
+    if (side > 0) dTarget = Math.max(dTarget, Math.min(need, wl - t.edgeMargin));
+    else dTarget = Math.min(dTarget, Math.max(need, -wr + t.edgeMargin));
+  }
   offset = dTarget - w.at(w.raceD, sl);
   const target = w.point(sl, dTarget);
   const fx = -Math.sin(car.yaw), fz = -Math.cos(car.yaw);
@@ -200,10 +298,13 @@ export function aiDrive(
   const throttle = err > 0 ? Math.min(1, err * t.throttleGain + 0.2) : 0;
   const brake = err < -1 ? Math.min(1, -err * t.brakeGain) : 0;
 
-  const stuckFor = Math.abs(u) < t.stuckSpeed ? ai.stuckFor + dt : 0;
+  // Stuck (stopped) or lost (spun / facing across the track) both count towards a reset.
+  const headingErr = Math.abs(Math.atan2(Math.sin(car.yaw - w.headingAt(s)), Math.cos(car.yaw - w.headingAt(s))));
+  const lost = Math.abs(u) < t.stuckSpeed || headingErr > t.wrongWayAngle;
+  const stuckFor = lost ? ai.stuckFor + dt : 0;
   return {
     inputs: { steer, throttle, brake },
-    state: { offset, stuckFor },
+    state: { offset, stuckFor, defendSide },
     wantsReset: stuckFor > t.stuckTime,
   };
 }

@@ -1,7 +1,8 @@
 # flite — low-poly racing on real circuits
 
 Browser racing game: low-poly look, real circuit layouts, one physics model with two
-handling sets (`feel` = forgiving, default; `sim` = closer to real values).
+handling sets (`feel` = forgiving, default; `sim` = closer to real values). The car looks like a
+mid-90s open-wheeler and performs like an F2-class car (~460 kW, 755 kg; other values estimated).
 
 ## Run it
 
@@ -31,6 +32,8 @@ Tip: full lock + full throttle from a standstill (feel set) = donut.
 Race settings live in the tuning panel (O → Race): AI difficulty (applies immediately) and the
 braking line (green = flat out, yellow = slow down soon, red = brake now). Running close behind
 another car gives a slipstream (less drag, a little less downforce); the HUD shows its strength.
+The AI defends (one move to cover the inside, never under braking or once you're alongside),
+leaves a car's width when side by side, and the car on the outside of a corner gives way.
 
 ## Checks
 

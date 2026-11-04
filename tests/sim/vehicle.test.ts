@@ -1,5 +1,5 @@
 /**
- * Whole-car behaviour. Ranges are "plausible for a modern open-wheel car"
+ * Whole-car behaviour. Ranges are "plausible for an F2-class open-wheel car"
  * sanity envelopes, not real data — M6 validates the sim set against real laps.
  */
 import { describe, expect, it } from 'vitest';
@@ -38,8 +38,8 @@ describe.each(['sim', 'feel'] as const)('vehicle (%s set)', (set) => {
 
   it('top speed is limited by drag to a plausible value', () => {
     const s = run(p, start(p), FULL_THROTTLE, 60);
-    expect(kmh(s.u)).toBeGreaterThan(310);
-    expect(kmh(s.u)).toBeLessThan(380);
+    expect(kmh(s.u)).toBeGreaterThan(285);
+    expect(kmh(s.u)).toBeLessThan(335);
     expect(isFiniteState(s)).toBe(true);
   });
 
@@ -84,7 +84,7 @@ describe.each(['sim', 'feel'] as const)('vehicle (%s set)', (set) => {
     run(p, fast, (s) => ({ steer: 1, throttle: s.u < target ? 1 : 0, brake: 0 }), 4, (s) => {
       peakAy = Math.max(peakAy, Math.abs(s.ayFiltered));
     });
-    expect(peakAy / GRAVITY).toBeGreaterThan(3);
+    expect(peakAy / GRAVITY).toBeGreaterThan(2.5);
   });
 
   it('wheels track road speed smoothly when coasting slowly (no step-to-step flip-flop)', () => {

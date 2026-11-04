@@ -1,6 +1,6 @@
 {
   "name": "Generic open-wheeler",
-  "description": "Original generic open-wheel race car with mid-1990s proportions (short wheelbase, raised nose, small rims). Geometry is 90s-style; performance values are estimates. NOT measured data from any real car.",
+  "description": "Original generic open-wheel race car with mid-1990s proportions (short wheelbase, raised nose, small rims) and F2-class performance. Power and mass follow publicly quoted F2-class figures; everything else is an estimate. NOT measured data from any real car.",
   "visual": {
     "length": { "value": 4.45, "unit": "m", "source": "estimate" },
     "width": { "value": 2.0, "unit": "m", "source": "estimate" }
@@ -9,7 +9,7 @@
     "sim": {
       "collisionRadius": { "value": 0.95, "unit": "m", "source": "estimate", "note": "car body = two circles of this radius" },
       "collisionOffset": { "value": 1.3, "unit": "m", "source": "estimate", "note": "circle centres this far ahead of / behind the CG" },
-      "mass": { "value": 800, "unit": "kg", "source": "estimate", "note": "car + driver, near the usual regulation minimum" },
+      "mass": { "value": 755, "unit": "kg", "source": "estimate", "note": "car + driver; publicly quoted F2-class minimum weight" },
       "yawInertia": { "value": 700, "unit": "kg*m^2", "source": "estimate" },
       "wheelbase": { "value": 2.95, "unit": "m", "source": "estimate" },
       "weightFront": { "value": 0.45, "unit": "-", "source": "estimate", "note": "fraction of static weight on the front axle" },
@@ -23,8 +23,8 @@
       "suspensionFrequency": { "value": 3.6, "unit": "Hz", "source": "estimate", "note": "body pitch/roll natural frequency" },
       "suspensionDamping": { "value": 0.6, "unit": "-", "source": "estimate", "note": "damping ratio; < 1 gives a small overshoot" },
 
-      "dragArea": { "value": 1.15, "unit": "m^2", "source": "estimate", "note": "Cd * frontal area" },
-      "liftArea": { "value": 4.5, "unit": "m^2", "source": "estimate", "note": "Cl * frontal area (downforce)" },
+      "dragArea": { "value": 1.05, "unit": "m^2", "source": "estimate", "note": "Cd * frontal area (F2-class guess)" },
+      "liftArea": { "value": 3.3, "unit": "m^2", "source": "estimate", "note": "Cl * frontal area (downforce, F2-class guess: less than a top-tier car)" },
       "draftLength": { "value": 40, "unit": "m", "source": "estimate", "note": "slipstream reaches this far behind a car" },
       "draftWidth": { "value": 1.6, "unit": "m", "source": "estimate", "note": "half-width of the slipstream right behind the car; it widens with distance" },
       "draftSpread": { "value": 0.03, "unit": "m/m", "source": "estimate", "note": "slipstream half-width growth per metre behind" },
@@ -52,13 +52,13 @@
       "tireRelaxationLength": { "value": 0.3, "unit": "m", "source": "estimate" },
       "tireLowSpeed": { "value": 3.0, "unit": "m/s", "source": "estimate", "note": "slip denominators never go below this (numerical safety at standstill)" },
 
-      "engineTorqueCurve": { "value": [[4000, 300], [7000, 450], [9000, 560], [10500, 620], [11500, 615], [12500, 560]], "unit": "[rpm, N*m]", "source": "estimate", "note": "combined power unit, ~740 kW peak" },
+      "engineTorqueCurve": { "value": [[4000, 190], [7000, 280], [9000, 350], [10500, 390], [11500, 385], [12500, 350]], "unit": "[rpm, N*m]", "source": "estimate", "note": "shape is a guess; scaled to ~460 kW (~620 hp) peak, the publicly quoted F2-class output" },
       "idleRpm": { "value": 4000, "unit": "rpm", "source": "estimate" },
       "revLimitRpm": { "value": 12500, "unit": "rpm", "source": "estimate" },
       "engineBrakeTorque": { "value": 120, "unit": "N*m", "source": "estimate", "note": "closed-throttle torque at the rev limit, scales to 0 at idle" },
       "gearRatios": { "value": [4.53, 3.67, 2.98, 2.42, 1.96, 1.59, 1.29, 1.05], "unit": "-", "source": "estimate", "note": "top gear tall enough that drag, not the limiter, sets top speed (so slipstreaming helps)" },
       "reverseRatio": { "value": 4.0, "unit": "-", "source": "estimate" },
-      "finalDrive": { "value": 4.0, "unit": "-", "source": "estimate" },
+      "finalDrive": { "value": 4.35, "unit": "-", "source": "estimate", "note": "geared so the limiter in top is just above the drag-limited top speed" },
       "drivetrainEfficiency": { "value": 0.92, "unit": "-", "source": "estimate" },
       "upshiftRpm": { "value": 12000, "unit": "rpm", "source": "estimate" },
       "downshiftRpm": { "value": 7500, "unit": "rpm", "source": "estimate" },
