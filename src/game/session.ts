@@ -5,7 +5,7 @@
  * Per step: car-to-car contacts -> AI decisions (every AI_EVERY steps) -> physics
  * step for every car -> race bookkeeping (every RACE_EVERY steps).
  */
-import { aiDrive, initialAIState, RacingPlan, type AIState } from '../ai/aiDriver';
+import { aiDrive, DEFAULT_STYLE, initialAIState, RacingPlan, type AIState, type AIStyle } from '../ai/aiDriver';
 import { SIM_DT } from '../sim/constants';
 import { carContacts } from '../sim/contacts';
 import { draftEffects, type DraftEffect } from '../sim/draft';
@@ -70,6 +70,8 @@ export interface RaceSnapshot {
 export class Session {
   readonly cars: SessionCar[];
   private readonly plans = new Map<string, RacingPlan>();
+  /** Racing personality shared by all AI cars. */
+  style: AIStyle = { ...DEFAULT_STYLE };
   /** Latest slipstream effect per car (for the HUD). */
   drafts: DraftEffect[] = [];
   /** Timing: first time any car reached each checkpoint, and each car's latest checkpoint + time. */
@@ -135,7 +137,7 @@ export class Session {
           continue;
         }
         const others = cars.filter((_, j) => j !== i).map((o) => ({ car: o.state, race: o.race }));
-        const dec = aiDrive(c.state, c.race, c.ai.plan, c.params, c.ai.state, others, dt * AI_EVERY);
+        const dec = aiDrive(c.state, c.race, c.ai.plan, c.params, c.ai.state, others, dt * AI_EVERY, this.style);
         c.inputs = dec.inputs;
         c.ai.state = dec.state;
         if (dec.wantsReset) this.resetCar(i);

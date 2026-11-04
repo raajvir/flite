@@ -66,6 +66,7 @@ const panel = new TuningPanel({
   },
   onRaceChange: (r) => {
     send({ type: 'setAIDifficulty', difficulty: r.aiDifficulty });
+    send({ type: 'setAIStyle', aggression: r.aiAggression, defense: r.aiDefense });
     if (brakingLine) brakingLine.visible = r.brakingLine;
   },
   onInputChange: (inp) => applyInput(inp),
@@ -318,6 +319,8 @@ if (!menuMode) send({
     laps,
     autopilot: trackName !== 'test' && demoMode !== null,
     aiDifficulty: panel.race.aiDifficulty,
+    aiAggression: panel.race.aiAggression,
+    aiDefense: panel.race.aiDefense,
   },
 });
 

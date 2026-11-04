@@ -127,3 +127,29 @@ describe('AI concedes a position it has lost', () => {
     expect(res.inputs.throttle).toBeLessThan(1); // lifted
   });
 });
+
+describe('AI personality sliders', () => {
+  it('defending at 0% never defends; at 100% it defends from further back', async () => {
+    const me = placed(S, lineD, 70);
+    const attacker = placed(S - 30, lineD, 78);
+    const { aiDrive: drive } = await import('../../src/ai/aiDriver');
+    const run = (defense: number, back: number) => {
+      const a = placed(S - back, lineD, 78);
+      let st = initialAIState();
+      for (let i = 0; i < 100; i++) st = drive(me.car, me.race, plan, p, st, [a], 0.01, { aggression: 0.5, defense }).state;
+      return st.defendSide;
+    };
+    expect(run(0, 30)).toBe(0);
+    expect(run(1, 70)).toBe(-1); // 70 m back: only a keen defender reacts
+    expect(run(0.5, 70)).toBe(0);
+    expect(attacker).toBeDefined();
+  });
+
+  it('aggressive AI follows closer before backing off', async () => {
+    const { styleTuning } = await import('../../src/ai/aiDriver');
+    expect(styleTuning({ aggression: 1, defense: 0.5 }).followGap).toBeLessThan(styleTuning({ aggression: 0, defense: 0.5 }).followGap);
+    const mid = styleTuning({ aggression: 0.5, defense: 0.5 });
+    expect(mid.followGap).toBeCloseTo(9, 9); // 50% = the original tuning
+    expect(mid.defendRange).toBeCloseTo(45, 9);
+  });
+});

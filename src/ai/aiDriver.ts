@@ -71,6 +71,36 @@ export interface AIProfile {
   skill: number;
 }
 
+/** Racing personality, 0..1 each (0.5 = the original tuning). */
+export interface AIStyle {
+  /** How keenly it attacks: pass attempts, following distance, room left, giving way */
+  aggression: number;
+  /** How keenly it defends against a faster car behind */
+  defense: number;
+}
+
+export const DEFAULT_STYLE: AIStyle = { aggression: 0.5, defense: 0.5 };
+
+const lerp = (a: number, b: number, k: number) => a + (b - a) * Math.max(0, Math.min(1, k));
+
+/** Style -> concrete racecraft numbers. At 0.5 each these equal the original constants. */
+export function styleTuning(st: AIStyle) {
+  const a = st.aggression, d = st.defense;
+  return {
+    overtakeLookahead: lerp(20, 50, a), // m: how far ahead it looks for someone to pass
+    passMinClosing: lerp(1, -3, a), // m/s: tries a pass when closing faster than this (negative = even when slightly slower)
+    followGap: lerp(12, 6, a), // m
+    followTimeGap: lerp(1.1, 0.5, a), // s
+    sideClearance: lerp(2.9, 2.3, a), // m centre-to-centre beside another car
+    concedeMargin: lerp(-1, 1, a), // m: concedes to a car alongside that is at least this far ahead
+    yieldAheadMargin: lerp(3.5, 0.5, a), // m: outside car gives way unless ahead by more than this
+    ersAttackRange: lerp(30, 90, a), // m
+    defendRange: lerp(0, 90, d), // m: 0 = never defends
+    defendCommitGap: lerp(11, 5, d), // m: makes its move while the attacker is at least this far back
+    defendEdgeGap: lerp(1.4, 0.6, d), // m left to the inside edge when covering
+  };
+}
+
 export interface AIState {
   /** Extra lateral offset on top of the racing line (for passing), m */
   offset: number;
@@ -187,8 +217,10 @@ export function aiDrive(
   ai: AIState,
   others: readonly { car: CarState; race: RaceCar }[],
   dt: number,
+  style: AIStyle = DEFAULT_STYLE,
 ): AIDecision {
   const t = AI_TUNING;
+  const st = styleTuning(style);
   const w = plan.world;
   const L = w.length;
   const s = race.s;
@@ -208,15 +240,15 @@ export function aiDrive(
   for (const o of others) {
     let gap = o.race.s - s;
     if (gap < -L / 2) gap += L;
-    if (gap <= 0 || gap > t.overtakeLookahead) continue;
+    if (gap <= 0 || gap > st.overtakeLookahead) continue;
     const lat = o.race.d - myD;
     if (Math.abs(lat) > t.carWidthClearance + 1) continue;
-    if (u - o.car.u > -1) {
+    if (u - o.car.u > st.passMinClosing) {
       const leftRoom = w.at(w.wl, s) - o.race.d, rightRoom = o.race.d + w.at(w.wr, s);
       const side = leftRoom > rightRoom ? 1 : -1;
       desired = clampD(o.race.d + side * t.overtakeLateral);
     }
-    const safeGap = t.followGap + Math.max(0, u - o.car.u) * t.followTimeGap;
+    const safeGap = st.followGap + Math.max(0, u - o.car.u) * st.followTimeGap;
     if (gap < safeGap && Math.abs(lat) < t.carWidthClearance) speedCap = Math.min(speedCap, o.car.u - 1);
   }
 
@@ -225,13 +257,13 @@ export function aiDrive(
   for (const o of others) {
     let gap = o.race.s - s;
     if (gap < -L / 2) gap += L;
-    if (gap >= -1 || gap < -t.defendRange) continue;
+    if (gap >= -1 || gap < -st.defendRange) continue;
     if (o.car.u - u < -0.5) continue; // slower car behind: no threat
     threatGap = Math.max(threatGap, gap);
   }
   let defendSide = threatGap > -Infinity ? ai.defendSide : 0;
   if (desired === null && threatGap > -Infinity) {
-    if (defendSide === 0 && !braking && threatGap <= -t.defendCommitGap) {
+    if (defendSide === 0 && !braking && threatGap <= -st.defendCommitGap) {
       // Which way does the next real corner turn? Scan ahead until the heading has changed
       // by a corner's worth (heading increases = turning left = +d side).
       for (let x = t.defendCornerStep; x <= t.defendCornerLookahead; x += t.defendCornerStep) {
@@ -243,7 +275,7 @@ export function aiDrive(
         }
       }
     }
-    if (defendSide !== 0) desired = defendSide > 0 ? maxD - t.defendEdgeGap : minD + t.defendEdgeGap;
+    if (defendSide !== 0) desired = defendSide > 0 ? maxD - st.defendEdgeGap : minD + st.defendEdgeGap;
   }
 
   // --- Leave space (overrides everything): keep a car's width from anyone alongside.
@@ -257,8 +289,8 @@ export function aiDrive(
     // A car alongside that has got its nose ahead has won the position: concede it —
     // more room and a small lift, so a pass that ends with touching wheels doesn't turn into
     // a tug of war.
-    const conceding = gap > 0;
-    const need = o.race.d + side * (conceding ? t.concedeClearance : t.sideClearance);
+    const conceding = gap > st.concedeMargin;
+    const need = o.race.d + side * (conceding ? t.concedeClearance : st.sideClearance);
     if (conceding) speedCap = Math.min(speedCap, Math.max(o.car.u - t.concedeSpeedDrop, vPlanNow * t.yieldMinPlanFraction));
     // Side by side into a corner: the car on the outside gives way unless clearly ahead.
     // The corner is judged from the point midway between the two cars, so both cars agree on
@@ -268,7 +300,7 @@ export function aiDrive(
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     // turn > 0 = left-hander, inside = left = +d; we're outside if we're on the other side.
     const outside = Math.abs(turn) > t.yieldMinTurn && Math.sign(turn) !== side;
-    if (outside && gap >= -t.yieldAheadMargin) {
+    if (outside && gap >= -st.yieldAheadMargin) {
       speedCap = Math.min(speedCap, Math.max(o.car.u - t.yieldSpeedDrop, vPlanNow * t.yieldMinPlanFraction));
     }
     if (side > 0 && latTarget < need) {
@@ -299,7 +331,7 @@ export function aiDrive(
     if (gap < -L / 2) gap += L;
     if (Math.abs(gap) > t.alongsideLength) continue;
     const side = myD >= o.race.d ? 1 : -1;
-    const need = o.race.d + swing + side * t.sideClearance;
+    const need = o.race.d + swing + side * st.sideClearance;
     if (side > 0) dTarget = Math.max(dTarget, Math.min(need, wl - t.edgeMargin));
     else dTarget = Math.min(dTarget, Math.max(need, -wr + t.edgeMargin));
   }
@@ -322,11 +354,11 @@ export function aiDrive(
   // ERS: boost on straights when attacking or defending, or freely when the battery is full-ish.
   const charge = car.battery / p.ersCapacity;
   const onStraight = throttle >= 0.99 && plan.speedAt(s + 100) > u + t.ersStraightMargin;
-  let racing = threatGap > -t.ersAttackRange;
+  let racing = threatGap > -st.ersAttackRange;
   for (const o of others) {
     let gap = o.race.s - s;
     if (gap < -L / 2) gap += L;
-    if (gap > 0 && gap < t.ersAttackRange) racing = true;
+    if (gap > 0 && gap < st.ersAttackRange) racing = true;
   }
   const boost = onStraight && ((racing && charge > t.ersMinCharge) || charge > t.ersFreeCharge) ? 1 : 0;
 

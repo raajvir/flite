@@ -15,6 +15,9 @@ export interface StartOptions {
   autopilot: boolean;
   /** 0..1 */
   aiDifficulty: number;
+  /** 0..1 each */
+  aiAggression: number;
+  aiDefense: number;
 }
 
 export type ToWorker =
@@ -22,6 +25,7 @@ export type ToWorker =
   | { type: 'setParams'; paramSet: ParamSetName; overrides: ParamOverrides }
   | { type: 'inputs'; inputs: DriverInputs }
   | { type: 'setAIDifficulty'; difficulty: number }
+  | { type: 'setAIStyle'; aggression: number; defense: number }
   /** Put the player back on track (R) */
   | { type: 'reset' }
   /** Restart the race from the grid (Shift+R) */

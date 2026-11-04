@@ -129,6 +129,10 @@ const KEYBOARD_DEFAULTS = { ...KEYBOARD_TUNING };
 export interface RaceSettings {
   /** 0..1 */
   aiDifficulty: number;
+  /** 0..1 */
+  aiAggression: number;
+  /** 0..1 */
+  aiDefense: number;
   brakingLine: boolean;
 }
 
@@ -140,7 +144,7 @@ export interface InputSettings {
   trackpadCentering: number;
 }
 
-const RACE_DEFAULTS: RaceSettings = { aiDifficulty: DIFFICULTY.default, brakingLine: true };
+const RACE_DEFAULTS: RaceSettings = { aiDifficulty: DIFFICULTY.default, aiAggression: 0.5, aiDefense: 0.5, brakingLine: true };
 export const INPUT_DEFAULTS: InputSettings = { trackpad: false, trackpadRange: 260, trackpadCentering: 1.5 };
 
 export interface CustomMode {
@@ -444,6 +448,16 @@ export class TuningPanel {
       this.group('Race', true, [
         this.row('AI difficulty', 'how much of the grip the AI dares to use; applies immediately', 0, 1, 0.01, race.aiDifficulty, RACE_DEFAULTS.aiDifficulty, pct, false, (v) => {
           race.aiDifficulty = v;
+          this.save();
+          this.opts.onRaceChange(this.race);
+        }),
+        this.row('AI aggression', 'higher = tries passes from further back, follows closer, leaves less room, gives way less', 0, 1, 0.01, race.aiAggression, RACE_DEFAULTS.aiAggression, pct, false, (v) => {
+          race.aiAggression = v;
+          this.save();
+          this.opts.onRaceChange(this.race);
+        }),
+        this.row('AI defending', '0 = never defends; higher = defends earlier and covers the inside tighter', 0, 1, 0.01, race.aiDefense, RACE_DEFAULTS.aiDefense, pct, false, (v) => {
+          race.aiDefense = v;
           this.save();
           this.opts.onRaceChange(this.race);
         }),

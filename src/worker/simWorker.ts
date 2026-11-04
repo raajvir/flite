@@ -81,6 +81,7 @@ function build(o: StartOptions): void {
   // Player starts at the back of the grid; AI in skill order ahead.
   const grid = setups.map((_, i) => (i === 0 ? o.aiCount : i - 1));
   session = new Session(world, setups, o.laps, 3, grid);
+  session.style = { aggression: o.aiAggression, defense: o.aiDefense };
   playerIndex = 0;
 }
 
@@ -170,6 +171,10 @@ ctx.onmessage = (e) => {
     }
     case 'inputs':
       inputs = msg.inputs;
+      break;
+    case 'setAIStyle':
+      if (options) options = { ...options, aiAggression: msg.aggression, aiDefense: msg.defense };
+      if (session) session.style = { aggression: msg.aggression, defense: msg.defense };
       break;
     case 'setAIDifficulty':
       if (options) options = { ...options, aiDifficulty: msg.difficulty };
