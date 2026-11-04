@@ -16,7 +16,7 @@ export const SOUND_TUNING = {
   whineIdleGain: 0.03,
   whineThrottleGain: 0.05,
   whineFilterHz: 900, // low-pass: takes the harsh edge off
-  skidMaxGain: 0.32,
+  skidMaxGain: 0.14,
   skidBandHz: 1100,
   smoothing: 0.04, // s, time constant for volume/pitch changes
 };

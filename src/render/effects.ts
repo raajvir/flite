@@ -131,7 +131,8 @@ export class TireEffects {
           this.lastPoint[i] = { x: wx, z: wz };
           marksChanged = true;
         }
-        this.spawnAcc[i]! += k * this.t.smokeRate * dt;
+        // Smoke from the rear tires only (front smoke looked wrong); all four leave marks.
+        if (i >= 2) this.spawnAcc[i]! += k * this.t.smokeRate * dt;
         while (this.spawnAcc[i]! >= 1) {
           this.spawnAcc[i]! -= 1;
           this.spawn(wx, wz, vwx, vwz);
